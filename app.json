@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "OpportunityGenie AI",
+    "slug": "opportunitygenie-ai",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#EEF1FB"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.opportunitygenie.ai"
+    },
+    "android": {
+      "package": "com.opportunitygenie.ai",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#EEF1FB"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "./plugins/withGoogleMobileAds.js",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "https://opportunitygenie.org",
+      "eas": {
+        "projectId": "9e4861f4-df2b-401b-b83f-f8ead4b5298e"
+      }
+    }
+  }
+}
