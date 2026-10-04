@@ -27,7 +27,7 @@ const ICONS_OUTLINE: Record<string, keyof typeof Ionicons.glyphMap> = {
 
 export function MainTabs() {
   return (
-    <Tab.Navigator
+    <Tab.Navigator id={undefined}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.blue,

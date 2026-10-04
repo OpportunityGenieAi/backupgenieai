@@ -73,7 +73,7 @@ export function AnimatedSplashScreen({ onFinish }: { onFinish: () => void }) {
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',

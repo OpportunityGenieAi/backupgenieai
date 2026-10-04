@@ -1,8 +1,97 @@
-import React, { useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TextInputProps,
+  View,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fonts } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
+
+const MISMATCH = "Passwords don't match.";
+const FIELD_BORDER = '#B9C3F2'; // always-visible boundary when a password field is not focused
+
+/**
+ * Password field with an optional Show/Hide toggle, a clear boundary
+ * (bold blue when focused, red on error) and a blinking dot that marks
+ * where typing starts (visible while the field is empty).
+ */
+interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntry' | 'style'> {
+  newPassword?: boolean;
+  hasError?: boolean;
+}
+
+function PasswordInput({ value, onChangeText, newPassword = false, hasError = false, ...rest }: PasswordInputProps) {
+  const [show, setShow] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const blink = useRef(new Animated.Value(1)).current;
+  const isEmpty = !value || value.length === 0;
+
+  useEffect(() => {
+    if (!isEmpty) return undefined;
+    blink.setValue(1);
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(blink, { toValue: 0, duration: 500, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(blink, { toValue: 1, duration: 500, easing: Easing.linear, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isEmpty, blink]);
+
+  const borderColor = hasError ? colors.red : focused ? colors.blue : FIELD_BORDER;
+
+  return (
+    <View style={[styles.pwField, { borderColor }, focused && styles.pwFieldFocused]}>
+      <TextInput
+        {...rest}
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={!show}
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete={newPassword ? 'password-new' : 'password'}
+        textContentType={newPassword ? 'newPassword' : 'password'}
+        cursorColor={colors.blue}
+        selectionColor={colors.blue}
+        onFocus={(e) => {
+          setFocused(true);
+          rest.onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          rest.onBlur?.(e);
+        }}
+        style={styles.pwInput}
+      />
+
+      {isEmpty ? (
+        <View pointerEvents="none" style={styles.pwDotWrap} importantForAccessibility="no">
+          <Animated.View style={[styles.pwDot, { opacity: blink }]} />
+        </View>
+      ) : null}
+
+      <Pressable
+        onPress={() => setShow((s) => !s)}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel={show ? 'Hide password' : 'Show password'}
+        style={styles.pwToggle}
+      >
+        <Text style={styles.pwToggleText}>{show ? 'Hide' : 'Show'}</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 export default function SignupScreen() {
   const navigation = useNavigation<any>();
@@ -21,7 +110,7 @@ export default function SignupScreen() {
       return;
     }
     if (password !== confirm) {
-      setLocalError("Passwords don't match.");
+      setLocalError(MISMATCH);
       return;
     }
     setSubmitting(true);
@@ -31,7 +120,7 @@ export default function SignupScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
       <Text style={styles.heading}>Create your account</Text>
       <Text style={styles.sub}>Free — takes under a minute.</Text>
       {(localError || error) && (
@@ -45,11 +134,21 @@ export default function SignupScreen() {
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1 }}>
           <Text style={styles.label}>Password</Text>
-          <TextInput style={styles.input} value={password} onChangeText={setPassword} secureTextEntry />
+          <PasswordInput
+            value={password}
+            onChangeText={setPassword}
+            newPassword
+            hasError={localError === MISMATCH}
+          />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.label}>Confirm</Text>
-          <TextInput style={styles.input} value={confirm} onChangeText={setConfirm} secureTextEntry />
+          <PasswordInput
+            value={confirm}
+            onChangeText={setConfirm}
+            newPassword
+            hasError={localError === MISMATCH}
+          />
         </View>
       </View>
 
@@ -82,4 +181,28 @@ const styles = StyleSheet.create({
   primaryBtnText: { fontFamily: fonts.bold, fontSize: 14, color: '#fff' },
   linkText: { fontFamily: fonts.bold, fontSize: 13, color: colors.blue },
   footerLinkText: { fontFamily: fonts.regular, fontSize: 12, color: colors.inkSoft, textDecorationLine: 'underline' },
+
+  // Password field
+  pwField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 48,
+    borderRadius: 10,
+    borderWidth: 2,
+    backgroundColor: colors.grayTint,
+  },
+  pwFieldFocused: { backgroundColor: '#FFFFFF' },
+  pwInput: {
+    flex: 1,
+    paddingLeft: 13,
+    paddingRight: 4,
+    paddingVertical: 10,
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    color: colors.ink,
+  },
+  pwDotWrap: { position: 'absolute', left: 13, top: 0, bottom: 0, justifyContent: 'center' },
+  pwDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.blue },
+  pwToggle: { paddingHorizontal: 10, alignSelf: 'stretch', justifyContent: 'center' },
+  pwToggleText: { fontFamily: fonts.bold, fontSize: 12, color: colors.blue },
 });
