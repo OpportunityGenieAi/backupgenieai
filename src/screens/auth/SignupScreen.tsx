@@ -12,24 +12,34 @@ import {
   TextInputProps,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fonts } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 
 const MISMATCH = "Passwords don't match.";
-const FIELD_BORDER = '#B9C3F2'; // always-visible boundary when a password field is not focused
+const FIELD_BORDER = '#B9C3F2'; // visible boundary when a password field is not focused
+const GREEN = '#1E8E3E';
 
 /**
- * Password field with an optional Show/Hide toggle, a clear boundary
- * (bold blue when focused, red on error) and a blinking dot that marks
- * where typing starts (visible while the field is empty).
+ * Password field with an eye icon to show/hide what is typed, a clear boundary
+ * (bold blue when focused, red on error, green when confirmed) and a blinking
+ * dot that marks where typing starts (visible while the field is empty).
  */
 interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntry' | 'style'> {
   newPassword?: boolean;
   hasError?: boolean;
+  isOk?: boolean;
 }
 
-function PasswordInput({ value, onChangeText, newPassword = false, hasError = false, ...rest }: PasswordInputProps) {
+function PasswordInput({
+  value,
+  onChangeText,
+  newPassword = false,
+  hasError = false,
+  isOk = false,
+  ...rest
+}: PasswordInputProps) {
   const [show, setShow] = useState(false);
   const [focused, setFocused] = useState(false);
   const blink = useRef(new Animated.Value(1)).current;
@@ -48,7 +58,7 @@ function PasswordInput({ value, onChangeText, newPassword = false, hasError = fa
     return () => loop.stop();
   }, [isEmpty, blink]);
 
-  const borderColor = hasError ? colors.red : focused ? colors.blue : FIELD_BORDER;
+  const borderColor = hasError ? colors.red : isOk ? GREEN : focused ? colors.blue : FIELD_BORDER;
 
   return (
     <View style={[styles.pwField, { borderColor }, focused && styles.pwFieldFocused]}>
@@ -63,6 +73,7 @@ function PasswordInput({ value, onChangeText, newPassword = false, hasError = fa
         textContentType={newPassword ? 'newPassword' : 'password'}
         cursorColor={colors.blue}
         selectionColor={colors.blue}
+        placeholderTextColor="#9AA3C7"
         onFocus={(e) => {
           setFocused(true);
           rest.onFocus?.(e);
@@ -71,7 +82,7 @@ function PasswordInput({ value, onChangeText, newPassword = false, hasError = fa
           setFocused(false);
           rest.onBlur?.(e);
         }}
-        style={styles.pwInput}
+        style={[styles.pwInput, { paddingLeft: isEmpty ? 30 : 13 }]}
       />
 
       {isEmpty ? (
@@ -87,7 +98,7 @@ function PasswordInput({ value, onChangeText, newPassword = false, hasError = fa
         accessibilityLabel={show ? 'Hide password' : 'Show password'}
         style={styles.pwToggle}
       >
-        <Text style={styles.pwToggleText}>{show ? 'Hide' : 'Show'}</Text>
+        <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.blue} />
       </Pressable>
     </View>
   );
@@ -102,6 +113,10 @@ export default function SignupScreen() {
   const [confirm, setConfirm] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  const confirmStarted = confirm.length > 0;
+  const matches = password === confirm;
+  const canSubmit = password.length >= 6 && confirmStarted && matches;
 
   const submit = async () => {
     setLocalError(null);
@@ -131,28 +146,42 @@ export default function SignupScreen() {
       <TextInput style={styles.input} value={name} onChangeText={setName} />
       <Text style={styles.label}>Email</Text>
       <TextInput style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.label}>Password</Text>
-          <PasswordInput
-            value={password}
-            onChangeText={setPassword}
-            newPassword
-            hasError={localError === MISMATCH}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.label}>Confirm</Text>
-          <PasswordInput
-            value={confirm}
-            onChangeText={setConfirm}
-            newPassword
-            hasError={localError === MISMATCH}
-          />
-        </View>
+
+      <View style={styles.pwGroup}>
+        <Text style={styles.label}>Create password</Text>
+        <PasswordInput
+          value={password}
+          onChangeText={setPassword}
+          newPassword
+          placeholder="Enter a password"
+        />
+        <Text style={styles.hint}>At least 6 characters. Tap the eye to see what you type.</Text>
       </View>
 
-      <Pressable style={styles.primaryBtn} onPress={submit} disabled={submitting}>
+      <View style={styles.pwDivider} />
+
+      <View style={styles.pwGroup}>
+        <Text style={styles.label}>Confirm password</Text>
+        <PasswordInput
+          value={confirm}
+          onChangeText={setConfirm}
+          newPassword
+          placeholder="Re-enter your password"
+          hasError={confirmStarted && !matches}
+          isOk={confirmStarted && matches && password.length >= 6}
+        />
+        {confirmStarted ? (
+          <Text style={[styles.matchText, { color: matches ? GREEN : colors.red }]}>
+            {matches ? 'Passwords match' : "Passwords don't match"}
+          </Text>
+        ) : null}
+      </View>
+
+      <Pressable
+        style={[styles.primaryBtn, (!canSubmit || submitting) && styles.primaryBtnDisabled]}
+        onPress={submit}
+        disabled={!canSubmit || submitting}
+      >
         {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Create account</Text>}
       </Pressable>
 
@@ -178,9 +207,16 @@ const styles = StyleSheet.create({
   label: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.inkSoft, marginBottom: 6, marginTop: 12 },
   input: { backgroundColor: colors.grayTint, borderRadius: 10, paddingHorizontal: 13, paddingVertical: 12, fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
   primaryBtn: { backgroundColor: colors.blue, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
+  primaryBtnDisabled: { opacity: 0.45 },
   primaryBtnText: { fontFamily: fonts.bold, fontSize: 14, color: '#fff' },
   linkText: { fontFamily: fonts.bold, fontSize: 13, color: colors.blue },
   footerLinkText: { fontFamily: fonts.regular, fontSize: 12, color: colors.inkSoft, textDecorationLine: 'underline' },
+
+  // Password section
+  pwGroup: { marginTop: 4 },
+  pwDivider: { height: 1, backgroundColor: '#DDE3F8', marginTop: 18, marginBottom: 6 },
+  hint: { fontFamily: fonts.regular, fontSize: 11.5, color: colors.inkSoft, marginTop: 6 },
+  matchText: { fontFamily: fonts.bold, fontSize: 12.5, marginTop: 6 },
 
   // Password field
   pwField: {
@@ -194,7 +230,6 @@ const styles = StyleSheet.create({
   pwFieldFocused: { backgroundColor: '#FFFFFF' },
   pwInput: {
     flex: 1,
-    paddingLeft: 13,
     paddingRight: 4,
     paddingVertical: 10,
     fontFamily: fonts.regular,
@@ -203,6 +238,5 @@ const styles = StyleSheet.create({
   },
   pwDotWrap: { position: 'absolute', left: 13, top: 0, bottom: 0, justifyContent: 'center' },
   pwDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.blue },
-  pwToggle: { paddingHorizontal: 10, alignSelf: 'stretch', justifyContent: 'center' },
-  pwToggleText: { fontFamily: fonts.bold, fontSize: 12, color: colors.blue },
+  pwToggle: { paddingHorizontal: 12, alignSelf: 'stretch', justifyContent: 'center' },
 });
