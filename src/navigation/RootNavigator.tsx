@@ -6,6 +6,7 @@ import SignupScreen from '../screens/auth/SignupScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
 import GpaConverterScreen from '../screens/profile/GpaConverterScreen';
+import ScholarshipDetailScreen from '../screens/scholarship/ScholarshipDetailScreen';
 import { AdminScreen, ScholarshipFormScreen } from '../screens/admin/AdminScreen';
 import AppSettingsScreen from '../screens/admin/AppSettingsScreen';
 import { colors } from '../theme/colors';
@@ -31,6 +32,10 @@ export function RootNavigator() {
       <Stack.Screen
         name="ForgotPassword" component={ForgotPasswordScreen}
         options={{ headerShown: true, title: '', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false }}
+      />
+      <Stack.Screen
+        name="ScholarshipDetail" component={ScholarshipDetailScreen}
+        options={{ headerShown: true, title: 'Scholarship', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false }}
       />
       <Stack.Screen name="GpaConverter" component={GpaConverterScreen} />
       <Stack.Screen name="Admin" component={AdminScreen} />

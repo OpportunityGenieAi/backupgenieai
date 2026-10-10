@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import {
   useFonts,
@@ -19,6 +19,18 @@ import { ProfileProvider } from './src/context/ProfileContext';
 import { ScholarshipProvider } from './src/context/ScholarshipContext';
 import { TrackerProvider } from './src/context/TrackerContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+
+// Shared links (https://opportunitygenie.org/s/<id>) open the scholarship inside the app.
+// "Main" stays underneath so the back button leads to the home tabs.
+const linking: LinkingOptions<any> = {
+  prefixes: ['https://opportunitygenie.org'],
+  config: {
+    initialRouteName: 'Main',
+    screens: {
+      ScholarshipDetail: 's/:id',
+    },
+  },
+};
 
 function SessionGate({ children }: { children: React.ReactNode }) {
   const { restoreSession, loading } = useAuth();
@@ -54,7 +66,7 @@ export default function App() {
         <ScholarshipProvider>
           <TrackerProvider>
             <SessionGate>
-              <NavigationContainer>
+              <NavigationContainer linking={linking}>
                 <StatusBar style="dark" />
                 <RootNavigator />
               </NavigationContainer>

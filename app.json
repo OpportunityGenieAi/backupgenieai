@@ -19,11 +19,26 @@
       "bundleIdentifier": "com.opportunitygenie.ai"
     },
     "android": {
-      "package": "com.opportunitygenie.ai",
+      "package": "opportunitygenie.org",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#EEF1FB"
-      }
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "opportunitygenie.org",
+              "pathPrefix": "/s/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -31,12 +46,26 @@
     },
     "plugins": [
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ],
+      [
         "./plugins/withGoogleMobileAds.js",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "androidAppId": "ca-app-pub-9273621287213519~7477809923",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-secure-store",
+      "expo-status-bar"
     ],
     "extra": {
       "apiBaseUrl": "https://opportunitygenie.org",
@@ -44,5 +73,9 @@
         "projectId": "9e4861f4-df2b-401b-b83f-f8ead4b5298e"
       }
     }
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-9273621287213519~7477809923",
+    "ios_app_id": "ca-app-pub-3940256099942544~1458002511"
   }
 }

@@ -24,6 +24,11 @@ export const ScholarshipsApi = {
     });
   },
 
+  // One scholarship by id (used when a shared link opens the app).
+  async get(id: string): Promise<Scholarship> {
+    return api.get(`/scholarships/${id}`, { auth: false });
+  },
+
   async create(payload: Omit<Scholarship, 'id' | 'match_score' | 'match_tier'>): Promise<Scholarship> {
     return api.post('/scholarships', payload, { auth: true });
   },
