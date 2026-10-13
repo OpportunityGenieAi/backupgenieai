@@ -7,7 +7,7 @@ import { colors } from '../theme/colors';
 import HomeScreen from '../screens/home/HomeScreen';
 import MatchScreen from '../screens/match/MatchScreen';
 import TrackerScreen from '../screens/tracker/TrackerScreen';
-import AdvisorScreen from '../screens/advisor/AdvisorScreen';
+import AdvisorHub from '../screens/advisor/AdvisorHub';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -33,7 +33,7 @@ function withTopInset(Screen: React.ComponentType<any>) {
 const HomeTabScreen = withTopInset(HomeScreen);
 const MatchTabScreen = withTopInset(MatchScreen);
 const TrackerTabScreen = withTopInset(TrackerScreen);
-const AdvisorTabScreen = withTopInset(AdvisorScreen);
+const AdvisorTabScreen = withTopInset(AdvisorHub);
 const ProfileTabScreen = withTopInset(ProfileScreen);
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {

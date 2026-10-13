@@ -16,7 +16,7 @@ export default function AdvisorScreen() {
   if (!user) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
-        <FeatureGate title="Unlock the AI Advisor" body="Get a personalized, honest read on your competitiveness and concrete next steps." />
+        <FeatureGate title="Unlock the Advisor" body="Get a personalized, honest read on your competitiveness and concrete next steps." />
       </View>
     );
   }
@@ -35,7 +35,7 @@ export default function AdvisorScreen() {
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
       <Text style={styles.eyebrow}>Ask anything</Text>
-      <Text style={styles.heading}>AI Advisor</Text>
+      <Text style={styles.heading}>Advisor</Text>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Personalized recommendations</Text>

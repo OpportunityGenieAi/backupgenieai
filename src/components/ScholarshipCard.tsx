@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts } from '../theme/colors';
 import { Scholarship } from '../api/scholarships';
 import { useInterstitialAd } from '../hooks/useInterstitialAd';
+import ShareButton from './ShareButton';
 
 function matchColor(tier?: string | null): string {
   if (tier === 'green') return colors.green;
@@ -75,9 +76,12 @@ export function ScholarshipCard({
         </View>
       )}
 
-      <Pressable style={styles.applyBtn} onPress={handleApply}>
-        <Text style={styles.applyBtnText}>Apply on official site</Text>
-      </Pressable>
+      <View style={styles.actionRow}>
+        <Pressable style={styles.applyBtn} onPress={handleApply}>
+          <Text style={styles.applyBtnText}>Apply on official site</Text>
+        </Pressable>
+        <ShareButton scholarship={scholarship} />
+      </View>
     </View>
   );
 }
@@ -102,6 +106,7 @@ const styles = StyleSheet.create({
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 12 },
   tag: { backgroundColor: colors.blueTint, borderRadius: 20, paddingHorizontal: 11, paddingVertical: 4 },
   tagText: { fontFamily: fonts.bold, fontSize: 11.5, color: colors.blue },
-  applyBtn: { backgroundColor: colors.blue, borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  applyBtn: { flex: 1, backgroundColor: colors.blue, borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
   applyBtnText: { fontFamily: fonts.bold, fontSize: 13.5, color: '#fff' },
 });
