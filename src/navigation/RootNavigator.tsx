@@ -11,11 +11,14 @@ import AdvisorChatScreen from '../screens/advisor/AdvisorChatScreen';
 import { AdminScreen, ScholarshipFormScreen } from '../screens/admin/AdminScreen';
 import AppSettingsScreen from '../screens/admin/AppSettingsScreen';
 import { colors } from '../theme/colors';
+import NotificationBridge from '../notifications/NotificationBridge';
 
 const Stack = createNativeStackNavigator();
 
 export function RootNavigator() {
   return (
+    <>
+    <NotificationBridge />
     <Stack.Navigator id={undefined} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen
@@ -47,5 +50,6 @@ export function RootNavigator() {
       <Stack.Screen name="AppSettings" component={AppSettingsScreen} />
       <Stack.Screen name="ScholarshipForm" component={ScholarshipFormScreen} />
     </Stack.Navigator>
+    </>
   );
 }

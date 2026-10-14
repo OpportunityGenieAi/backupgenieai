@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useState } from 'react';
 import { AppUser, AuthApi } from '../api/auth';
 import { ApiError } from '../api/client';
 import { TokenStorage } from '../api/tokenStorage';
+import { disablePush } from '../notifications/push';
 
 export type LoginResult = 'ok' | 'unverified' | 'error';
 
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    await disablePush(); // must run while the login token is still valid
     await AuthApi.logout();
     setUser(null);
   }, []);

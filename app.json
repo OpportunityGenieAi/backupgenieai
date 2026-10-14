@@ -2,7 +2,7 @@
   "expo": {
     "name": "OpportunityGenie AI",
     "slug": "opportunitygenie-ai",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "opportunitygenie.org",
-      "versionCode": 1,
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#EEF1FB"
@@ -36,9 +36,13 @@
               "pathPrefix": "/s/"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
-      ]
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -65,13 +69,20 @@
       ],
       "expo-font",
       "expo-secure-store",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-notifications"
     ],
     "extra": {
       "apiBaseUrl": "https://opportunitygenie.org",
       "eas": {
         "projectId": "9e4861f4-df2b-401b-b83f-f8ead4b5298e"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/9e4861f4-df2b-401b-b83f-f8ead4b5298e"
     }
   },
   "react-native-google-mobile-ads": {

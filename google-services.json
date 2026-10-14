@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "727849766029",
+    "project_id": "opportunitygenie-ai",
+    "storage_bucket": "opportunitygenie-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:727849766029:android:e605705c2ed2b4809ea6c4",
+        "android_client_info": {
+          "package_name": "opportunitygenie.org"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAoR3sHltSrQJWlsOWW9tiwVU2TgjjU6Tw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

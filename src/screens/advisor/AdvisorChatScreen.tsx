@@ -44,16 +44,38 @@ const SUGGESTIONS: { label: string; send?: string; fill?: string }[] = [
 let idCounter = 0;
 const uid = () => `m${Date.now()}_${idCounter++}`;
 
+const BUSY_TEXT = 'The advisor is busy right now — please try again in a few minutes.';
+const GENERIC_TEXT = "Couldn't reach the advisor just now — try again in a moment.";
+
+/** Finds a readable message inside whatever the API client threw (string, Error, or an object). */
+function messageFrom(value: any, depth = 0): string {
+  if (!value || depth > 2) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'object') {
+    for (const key of ['detail', 'message', 'error']) {
+      const found = messageFrom(value[key], depth + 1);
+      if (found) return found;
+    }
+  }
+  return '';
+}
+
 function friendlyError(e: any): { text: string; needsLogin: boolean } {
-  const raw = String(e?.message ?? e ?? '').trim();
-  if (/log ?in|unauthor|not authenticated|credentials|401/i.test(raw)) {
+  const status = Number(e?.status ?? e?.statusCode ?? e?.response?.status) || 0;
+  const raw =
+    messageFrom(e) || messageFrom(e?.data) || messageFrom(e?.body) || messageFrom(e?.response?.data);
+
+  if (status === 401 || status === 403 || /log ?in|unauthor|not authenticated|credentials/i.test(raw)) {
     return { text: 'Please log in to chat with the advisor.', needsLogin: true };
+  }
+  if (status === 429 || status === 503 || /busy|too many|quickly|high demand/i.test(raw)) {
+    return { text: raw && raw.length <= 160 ? raw : BUSY_TEXT, needsLogin: false };
   }
   if (/network request failed|failed to fetch|timeout|timed out/i.test(raw)) {
     return { text: 'Check your internet connection and try again.', needsLogin: false };
   }
   if (raw && raw.length <= 200) return { text: raw, needsLogin: false };
-  return { text: "Couldn't reach the advisor just now — try again in a moment.", needsLogin: false };
+  return { text: GENERIC_TEXT, needsLogin: false };
 }
 
 function formatWhen(iso: string): string {

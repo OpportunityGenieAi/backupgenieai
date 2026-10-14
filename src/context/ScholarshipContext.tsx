@@ -1,13 +1,15 @@
 import React, { createContext, useCallback, useContext, useState } from 'react';
-import { Scholarship, ScholarshipsApi } from '../api/scholarships';
+import { Scholarship, ScholarshipsApi, SortKey } from '../api/scholarships';
 
 interface ScholarshipContextValue {
   items: Scholarship[];
   loading: boolean;
   query: string;
   region: string;
+  sort: SortKey;
   setQuery: (q: string) => void;
   setRegion: (r: string) => void;
+  setSort: (s: SortKey) => void;
   fetch: (auth: boolean) => Promise<void>;
   sortedByMatch: () => Scholarship[];
 }
@@ -19,25 +21,28 @@ export function ScholarshipProvider({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
   const [region, setRegion] = useState('All');
+  const [sort, setSort] = useState<SortKey>('latest');
 
   const fetchList = useCallback(async (auth: boolean) => {
     setLoading(true);
     try {
-      const res = await ScholarshipsApi.list({ q: query, region, auth });
+      const res = await ScholarshipsApi.list({ q: query, region, sort, auth });
       setItems(res);
     } catch (err) {
-  console.log('Scholarship fetch failed:', err);
-}
+      console.log('Scholarship fetch failed:', err);
+    }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, region]);
+  }, [query, region, sort]);
 
   const sortedByMatch = useCallback(() => {
     return [...items].sort((a, b) => (b.match_score ?? -1) - (a.match_score ?? -1));
   }, [items]);
 
   return (
-    <ScholarshipContext.Provider value={{ items, loading, query, region, setQuery, setRegion, fetch: fetchList, sortedByMatch }}>
+    <ScholarshipContext.Provider
+      value={{ items, loading, query, region, sort, setQuery, setRegion, setSort, fetch: fetchList, sortedByMatch }}
+    >
       {children}
     </ScholarshipContext.Provider>
   );
