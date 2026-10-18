@@ -16,3 +16,5 @@ web-build/
 credentials.json
 credentials/
 *.jks
+app.json.bak
+config-output.txt
