@@ -70,7 +70,8 @@
       "expo-font",
       "expo-secure-store",
       "expo-status-bar",
-      "expo-notifications"
+      "expo-notifications",
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "apiBaseUrl": "https://opportunitygenie.org",

@@ -7,7 +7,7 @@ import PasswordInput from '../../components/PasswordInput';
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
-  const { login, error } = useAuth();
+  const { login, loginWithGoogle, error } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -20,6 +20,13 @@ export default function LoginScreen() {
     if (result === 'ok') navigation.goBack();
     // Password was right but the email isn't confirmed yet: send a fresh code.
     if (result === 'unverified') navigation.replace('VerifyEmail', { email: email.trim(), autoResend: true });
+  };
+
+  const googleSubmit = async () => {
+    setSubmitting(true);
+    const result = await loginWithGoogle();
+    setSubmitting(false);
+    if (result === 'ok') navigation.goBack();
   };
 
   return (
@@ -53,6 +60,15 @@ export default function LoginScreen() {
         {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Log in</Text>}
       </Pressable>
 
+      <View style={styles.orRow}>
+        <View style={styles.orLine} />
+        <Text style={styles.orText}>or</Text>
+        <View style={styles.orLine} />
+      </View>
+      <Pressable style={styles.googleBtn} onPress={googleSubmit} disabled={submitting}>
+        <Text style={styles.googleBtnText}>Continue with Google</Text>
+      </Pressable>
+
       <Pressable style={{ marginTop: 16, alignItems: 'center' }} onPress={() => navigation.navigate('ForgotPassword')}>
         <Text style={styles.linkText}>Forgot your password?</Text>
       </Pressable>
@@ -79,6 +95,11 @@ const styles = StyleSheet.create({
   input: { backgroundColor: colors.grayTint, borderRadius: 10, paddingHorizontal: 13, paddingVertical: 12, fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
   primaryBtn: { backgroundColor: colors.blue, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
   primaryBtnText: { fontFamily: fonts.bold, fontSize: 14, color: '#fff' },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
+  orLine: { flex: 1, height: 1, backgroundColor: colors.line },
+  orText: { fontFamily: fonts.regular, fontSize: 12, color: colors.inkSoft },
+  googleBtn: { borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 14 },
+  googleBtnText: { fontFamily: fonts.bold, fontSize: 14, color: colors.ink },
   linkText: { fontFamily: fonts.bold, fontSize: 13, color: colors.blue },
   footerLinkText: { fontFamily: fonts.regular, fontSize: 12, color: colors.inkSoft, textDecorationLine: 'underline' },
 });

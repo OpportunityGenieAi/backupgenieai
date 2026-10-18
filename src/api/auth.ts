@@ -23,6 +23,13 @@ export const AuthApi = {
     return res.user;
   },
 
+  /** Signs in with a Google ID token from the native Google sheet. */
+  async googleLogin(idToken: string): Promise<AppUser> {
+    const res = await api.post('/auth/google', { id_token: idToken });
+    await TokenStorage.save(res.access_token);
+    return res.user;
+  },
+
   async resendCode(email: string): Promise<void> {
     await api.post('/auth/resend-code', { email });
   },

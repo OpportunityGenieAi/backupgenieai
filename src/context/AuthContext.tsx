@@ -3,6 +3,7 @@ import { AppUser, AuthApi } from '../api/auth';
 import { ApiError } from '../api/client';
 import { TokenStorage } from '../api/tokenStorage';
 import { disablePush } from '../notifications/push';
+import { getGoogleIdToken, signOutGoogle } from '../auth/google';
 
 export type LoginResult = 'ok' | 'unverified' | 'error';
 
@@ -12,6 +13,8 @@ interface AuthContextValue {
   error: string | null;
   restoreSession: () => Promise<void>;
   login: (email: string, password: string) => Promise<LoginResult>;
+  /** Opens the Google sheet. Returns 'ok' on success, 'cancelled' if closed, 'error' otherwise. */
+  loginWithGoogle: () => Promise<'ok' | 'cancelled' | 'error'>;
   /** Returns true when the confirmation code email has been sent. */
   signup: (params: { name: string; email: string; password: string }) => Promise<boolean>;
   /** Confirms the emailed code and logs the user in. */
@@ -51,6 +54,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const loginWithGoogle = useCallback(async (): Promise<'ok' | 'cancelled' | 'error'> => {
+    setError(null);
+    try {
+      const idToken = await getGoogleIdToken();
+      if (!idToken) return 'cancelled';
+      const u = await AuthApi.googleLogin(idToken);
+      setUser(u);
+      return 'ok';
+    } catch (e: any) {
+      setError(e?.message || 'Google sign-in failed');
+      return 'error';
+    }
+  }, []);
+
   const signup = useCallback(async (params: { name: string; email: string; password: string }) => {
     setError(null);
     try {
@@ -76,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     await disablePush(); // must run while the login token is still valid
+    await signOutGoogle();
     await AuthApi.logout();
     setUser(null);
   }, []);
@@ -83,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clearError = useCallback(() => setError(null), []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, restoreSession, login, signup, verifyEmail, logout, clearError }}>
+    <AuthContext.Provider value={{ user, loading, error, restoreSession, login, loginWithGoogle, signup, verifyEmail, logout, clearError }}>
       {children}
     </AuthContext.Provider>
   );
