@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fonts } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
@@ -66,6 +66,7 @@ export default function LoginScreen() {
         <View style={styles.orLine} />
       </View>
       <Pressable style={styles.googleBtn} onPress={googleSubmit} disabled={submitting}>
+        <Image source={require('../../../assets/google-g.png')} style={styles.googleLogo} />
         <Text style={styles.googleBtnText}>Continue with Google</Text>
       </Pressable>
 
@@ -98,8 +99,9 @@ const styles = StyleSheet.create({
   orRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
   orLine: { flex: 1, height: 1, backgroundColor: colors.line },
   orText: { fontFamily: fonts.regular, fontSize: 12, color: colors.inkSoft },
-  googleBtn: { borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 14 },
-  googleBtnText: { fontFamily: fonts.bold, fontSize: 14, color: colors.ink },
+  googleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: '#747775', backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: 12, marginTop: 14 },
+  googleLogo: { width: 20, height: 20 },
+  googleBtnText: { fontFamily: fonts.bold, fontSize: 14, color: '#1F1F1F' },
   linkText: { fontFamily: fonts.bold, fontSize: 13, color: colors.blue },
   footerLinkText: { fontFamily: fonts.regular, fontSize: 12, color: colors.inkSoft, textDecorationLine: 'underline' },
 });

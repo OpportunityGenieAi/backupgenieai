@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Linking,
   Pressable,
   ScrollView,
@@ -19,7 +20,7 @@ const GREEN = '#1E8E3E';
 
 export default function SignupScreen() {
   const navigation = useNavigation<any>();
-  const { signup, error } = useAuth();
+  const { signup, loginWithGoogle, error } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +46,14 @@ export default function SignupScreen() {
     const ok = await signup({ name: name.trim(), email: email.trim(), password });
     setSubmitting(false);
     if (ok) navigation.replace('VerifyEmail', { email: email.trim() });
+  };
+
+  const googleSubmit = async () => {
+    setLocalError(null);
+    setSubmitting(true);
+    const result = await loginWithGoogle();
+    setSubmitting(false);
+    if (result === 'ok') navigation.goBack();
   };
 
   return (
@@ -98,6 +107,16 @@ export default function SignupScreen() {
         {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Create account</Text>}
       </Pressable>
 
+      <View style={styles.orRow}>
+        <View style={styles.orLine} />
+        <Text style={styles.orText}>or</Text>
+        <View style={styles.orLine} />
+      </View>
+      <Pressable style={styles.googleBtn} onPress={googleSubmit} disabled={submitting}>
+        <Image source={require('../../../assets/google-g.png')} style={styles.googleLogo} />
+        <Text style={styles.googleBtnText}>Continue with Google</Text>
+      </Pressable>
+
       <Pressable style={{ marginTop: 16, alignItems: 'center' }} onPress={() => navigation.replace('Login')}>
         <Text style={styles.linkText}>Already registered? Log in</Text>
       </Pressable>
@@ -122,6 +141,12 @@ const styles = StyleSheet.create({
   primaryBtn: { backgroundColor: colors.blue, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
   primaryBtnDisabled: { opacity: 0.45 },
   primaryBtnText: { fontFamily: fonts.bold, fontSize: 14, color: '#fff' },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
+  orLine: { flex: 1, height: 1, backgroundColor: colors.line },
+  orText: { fontFamily: fonts.regular, fontSize: 12, color: colors.inkSoft },
+  googleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: '#747775', backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: 12, marginTop: 14 },
+  googleLogo: { width: 20, height: 20 },
+  googleBtnText: { fontFamily: fonts.bold, fontSize: 14, color: '#1F1F1F' },
   linkText: { fontFamily: fonts.bold, fontSize: 13, color: colors.blue },
   footerLinkText: { fontFamily: fonts.regular, fontSize: 12, color: colors.inkSoft, textDecorationLine: 'underline' },
 

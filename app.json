@@ -78,7 +78,8 @@
       "apiFallbackUrl": "https://opportunitygenie-api-production-cee3.up.railway.app",
       "eas": {
         "projectId": "9e4861f4-df2b-401b-b83f-f8ead4b5298e"
-      }
+      },
+      "googleWebClientId": "817061632208-n0j6llrj4qjsfmgm4r9jlh41chfq1ecc.apps.googleusercontent.com"
     },
     "runtimeVersion": {
       "policy": "appVersion"
