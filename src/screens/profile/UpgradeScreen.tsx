@@ -4,18 +4,24 @@ import {
   initConnection,
   fetchProducts,
   requestPurchase,
+  getAvailablePurchases,
   purchaseUpdatedListener,
   purchaseErrorListener,
   finishTransaction,
 } from 'expo-iap';
+import { SubscriptionApi } from '../../api/subscription';
 
 const SUBSCRIPTION_ID = 'premium_monthly';
 
-// TODO: send the token to your backend; return true only if the server verified it
+function tokenOf(purchase: any): string | undefined {
+  return purchase?.purchaseToken ?? purchase?.purchaseTokenAndroid;
+}
+
 async function verifyOnServer(purchase: any): Promise<boolean> {
-  // e.g. POST /subscription/verify { productId, purchaseToken }
-  // The server checks it with the Google Play Developer API and sets subscription_tier.
-  return false;
+  const token = tokenOf(purchase);
+  if (!token) throw new Error('No purchase token found on this purchase.');
+  const status = await SubscriptionApi.verify(token, purchase?.productId);
+  return !!status.premium;
 }
 
 export default function UpgradeScreen() {
@@ -36,10 +42,10 @@ export default function UpgradeScreen() {
               await finishTransaction({ purchase, isConsumable: false });
               Alert.alert('Subscribed', 'Premium is now active.');
             } else {
-              Alert.alert('Verification failed', 'Please contact support.');
+              Alert.alert('Not active yet', 'Google has not confirmed this payment yet. Try Restore purchase in a minute.');
             }
           } catch (e: any) {
-            Alert.alert('Error', String(e?.message ?? e));
+            Alert.alert('Verification failed', String(e?.message ?? e));
           }
         });
 
@@ -80,6 +86,27 @@ export default function UpgradeScreen() {
     });
   };
 
+  const restore = async () => {
+    try {
+      const purchases: any[] = ((await getAvailablePurchases()) as any) ?? [];
+      const mine = purchases.filter((p) => p?.productId === SUBSCRIPTION_ID);
+      if (mine.length === 0) {
+        Alert.alert('Nothing to restore', 'No subscription was found on this Google account.');
+        return;
+      }
+      let active = false;
+      for (const p of mine) {
+        if (await verifyOnServer(p)) {
+          active = true;
+          await finishTransaction({ purchase: p, isConsumable: false });
+        }
+      }
+      Alert.alert(active ? 'Restored' : 'Not active', active ? 'Premium is active.' : 'That subscription is no longer active.');
+    } catch (e: any) {
+      Alert.alert('Restore failed', String(e?.message ?? e));
+    }
+  };
+
   if (loading) return <ActivityIndicator style={{ marginTop: 40 }} />;
 
   if (!product) {
@@ -95,6 +122,8 @@ export default function UpgradeScreen() {
       <Text style={{ fontSize: 20, marginBottom: 8 }}>{product.title ?? 'Premium'}</Text>
       <Text style={{ marginBottom: 16 }}>{product.displayPrice ?? ''}</Text>
       <Button title="Subscribe" onPress={subscribe} />
+      <View style={{ height: 12 }} />
+      <Button title="Restore purchase" onPress={restore} />
     </View>
   );
 }
