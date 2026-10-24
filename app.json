@@ -2,7 +2,7 @@
   "expo": {
     "name": "OpportunityGenie AI",
     "slug": "opportunitygenie-ai",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -71,7 +71,8 @@
       "expo-secure-store",
       "expo-status-bar",
       "expo-notifications",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "expo-iap"
     ],
     "extra": {
       "apiBaseUrl": "https://opportunitygenie.org",
