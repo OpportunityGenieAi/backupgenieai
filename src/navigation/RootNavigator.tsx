@@ -7,6 +7,7 @@ import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
 import GpaConverterScreen from '../screens/profile/GpaConverterScreen';
 import UpgradeScreen from '../screens/profile/UpgradeScreen';
+import PremiumGateBridge from '../components/PremiumGateBridge';
 import ScholarshipDetailScreen from '../screens/scholarship/ScholarshipDetailScreen';
 import AdvisorChatScreen from '../screens/advisor/AdvisorChatScreen';
 import { AdminScreen, ScholarshipFormScreen } from '../screens/admin/AdminScreen';
@@ -20,6 +21,7 @@ export function RootNavigator() {
   return (
     <>
     <NotificationBridge />
+    <PremiumGateBridge />
     <Stack.Navigator id={undefined} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen

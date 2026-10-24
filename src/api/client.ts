@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { API_BASE_URL } from '../config/env';
 import { TokenStorage } from './tokenStorage';
+import { PremiumGate } from './premiumGate';
 
 export class ApiError extends Error {
   status: number;
@@ -49,6 +50,7 @@ async function handle(res: Response): Promise<any> {
     }
   }
   if (res.ok) return body;
+  if (res.status === 402) PremiumGate.notify();
   throw new ApiError(res.status, describeError(body, res.status));
 }
 
