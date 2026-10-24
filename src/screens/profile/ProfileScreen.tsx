@@ -221,6 +221,14 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.card}>
+        <Text style={styles.cardTitle}>OpportunityGenie Premium</Text>
+        <Text style={styles.cardSub}>Get scholarships matched to you, statement of purpose review and motivation letter feedback.</Text>
+        <Pressable style={styles.primaryBtn} onPress={() => navigation.navigate('Upgrade')}>
+          <Text style={styles.primaryBtnText}>Upgrade to Premium</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.card}>
         <Text style={styles.cardTitle}>Legal</Text>
         <Pressable
           style={styles.linkRow}
