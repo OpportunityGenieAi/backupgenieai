@@ -7,12 +7,15 @@ import { useScholarships } from '../../context/ScholarshipContext';
 import { useTracker } from '../../context/TrackerContext';
 import { ScholarshipCard } from '../../components/ScholarshipCard';
 import { FeatureGate } from '../../components/FeatureGate';
+import { AdBanner } from '../../components/AdBanner';
+import { useShowAdOnFocus } from '../../hooks/useInterstitialAd';
 
 export default function MatchScreen() {
   const { user } = useAuth();
   const profile = useProfile();
   const scholarships = useScholarships();
   const tracker = useTracker();
+  useShowAdOnFocus();
 
   useEffect(() => {
     if (user) scholarships.fetch(true);
@@ -34,6 +37,7 @@ export default function MatchScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.heading}>Best Matches</Text>
+        <AdBanner />
         <View style={styles.emptyBox}>
           <Text style={styles.emptyText}>
             Complete your profile (GPA + academic details) on the Profile tab to see match scores here.
@@ -53,6 +57,7 @@ export default function MatchScreen() {
         <View>
           <Text style={styles.heading}>Best Matches</Text>
           <Text style={styles.sub}>Ranked by fit to your saved profile</Text>
+          <AdBanner />
         </View>
       }
       renderItem={({ item }) => (

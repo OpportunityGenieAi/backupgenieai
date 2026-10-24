@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fonts } from '../../theme/colors';
 import AdvisorScreen from './AdvisorScreen';
+import { useShowAdOnFocus } from '../../hooks/useInterstitialAd';
 
 /**
  * The Advisor tab: the existing recommendations screen, plus a bar that stays at the bottom so the
@@ -11,6 +12,7 @@ import AdvisorScreen from './AdvisorScreen';
  */
 export default function AdvisorHub() {
   const navigation = useNavigation<any>();
+  useShowAdOnFocus();
 
   return (
     <View style={styles.container}>

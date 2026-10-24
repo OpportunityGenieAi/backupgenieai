@@ -1,0 +1,1121 @@
+
+
+######## src/api/advisorChat.ts ########
+import { api } from './client';
+
+export interface ChatReply {
+  text: string;
+  conversation_id?: string | null;
+  title?: string | null;
+}
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  preview?: string | null;
+  updated_at: string;
+}
+
+export interface StoredMessage {
+  id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
+export interface ConversationDetail {
+  id: string;
+  title: string;
+  messages: StoredMessage[];
+}
+
+export const AdvisorChatApi = {
+  /**
+   * Sends one new message. Pass the conversation id to continue a saved chat; leave it out to start a
+   * new one. The server keeps the history, saves the exchange and returns the id of the chat.
+   */
+  async send(message: string, conversationId?: string): Promise<ChatReply> {
+    return api.post(
+      '/advisor/chat',
+      { message, conversation_id: conversationId ?? null },
+      { auth: true },
+    );
+  },
+
+  async list(): Promise<ConversationSummary[]> {
+    return api.get('/advisor/conversations', { auth: true });
+  },
+
+  async get(id: string): Promise<ConversationDetail> {
+    return api.get(`/advisor/conversations/${id}`, { auth: true });
+  },
+
+  async remove(id: string): Promise<void> {
+    await api.delete(`/advisor/conversations/${id}`, { auth: true });
+  },
+};
+
+
+######## src/api/auth.ts ########
+import { api } from './client';
+import { TokenStorage } from './tokenStorage';
+
+export interface AppUser {
+  id: string;
+  name: string;
+  email: string;
+  is_admin: boolean;
+  subscription_tier: string;
+  preferred_locale: string;
+}
+
+export const AuthApi = {
+  /** Step 1: creates the account and emails a confirmation code. Does NOT log in. */
+  async signup(params: { name: string; email: string; password: string }): Promise<void> {
+    await api.post('/auth/signup', params);
+  },
+
+  /** Step 2: the user types the emailed code; on success they're logged in. */
+  async verifyEmail(email: string, code: string): Promise<AppUser> {
+    const res = await api.post('/auth/verify-email', { email, code });
+    await TokenStorage.save(res.access_token);
+    return res.user;
+  },
+
+  /** Signs in with a Google ID token from the native Google sheet. */
+  async googleLogin(idToken: string): Promise<AppUser> {
+    const res = await api.post('/auth/google', { id_token: idToken });
+    await TokenStorage.save(res.access_token);
+    return res.user;
+  },
+
+  async resendCode(email: string): Promise<void> {
+    await api.post('/auth/resend-code', { email });
+  },
+
+  async login(email: string, password: string): Promise<AppUser> {
+    const res = await api.post('/auth/login', { email, password });
+    await TokenStorage.save(res.access_token);
+    return res.user;
+  },
+
+  /** Emails a password-reset code. */
+  async forgotPasswordStart(email: string): Promise<void> {
+    await api.post('/auth/forgot-password/start', { email });
+  },
+
+  async forgotPasswordVerify(email: string, code: string, new_password: string): Promise<void> {
+    await api.post('/auth/forgot-password/verify', { email, code, new_password });
+  },
+
+  async me(): Promise<AppUser | null> {
+    try {
+      return await api.get('/auth/me', { auth: true });
+    } catch {
+      return null;
+    }
+  },
+
+  async logout(): Promise<void> {
+    await TokenStorage.clear();
+  },
+};
+
+
+######## src/api/client.ts ########
+import Constants from 'expo-constants';
+import { API_BASE_URL } from '../config/env';
+import { TokenStorage } from './tokenStorage';
+
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+// Optional second address for the same server. Set "apiFallbackUrl" under "extra" in app.json.
+const FALLBACK_URL: string | undefined = (Constants.expoConfig?.extra as any)?.apiFallbackUrl;
+const REQUEST_TIMEOUT_MS = 25000;
+const NETWORK_ERROR = "Can't reach the server. Check your internet connection and try again.";
+
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+async function buildHeaders(auth: boolean): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (auth) {
+    const token = await TokenStorage.read();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+function describeError(body: any, status: number): string {
+  const detail = body?.detail;
+  if (typeof detail === 'string' && detail) return detail;
+  if (Array.isArray(detail) && detail.length) {
+    return detail.map((d: any) => (d?.msg ? String(d.msg) : 'invalid value')).join('; ');
+  }
+  if (status === 502 || status === 503 || status === 504) {
+    return 'The server is busy or restarting. Please try again in a moment.';
+  }
+  return `Something went wrong (${status}).`;
+}
+
+async function handle(res: Response): Promise<any> {
+  const text = await res.text();
+  let body: any = null;
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = null; // e.g. an HTML error page from a proxy
+    }
+  }
+  if (res.ok) return body;
+  throw new ApiError(res.status, describeError(body, res.status));
+}
+
+function toQuery(params?: Record<string, string | undefined>): string {
+  if (!params) return '';
+  const filtered = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
+  if (filtered.length === 0) return '';
+  return '?' + filtered.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v as string)}`).join('&');
+}
+
+const BASES: string[] = Array.from(
+  new Set([API_BASE_URL, FALLBACK_URL].filter((b): b is string => !!b).map((b) => b.replace(/\/+$/, ''))),
+);
+let preferred = 0; // remembers which address worked last
+
+async function send(method: Method, pathAndQuery: string, auth: boolean, body?: any): Promise<Response> {
+  const headers = await buildHeaders(auth);
+  const order = BASES.map((_, i) => i).sort((a, b) => (a === preferred ? -1 : b === preferred ? 1 : a - b));
+
+  for (const i of order) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const res = await fetch(`${BASES[i]}${pathAndQuery}`, {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      preferred = i;
+      return res;
+    } catch (err: any) {
+      clearTimeout(timer);
+      // A timeout means the server may have received the request, so don't send a write twice.
+      if (err?.name === 'AbortError' && method !== 'GET') break;
+    }
+  }
+  throw new ApiError(0, NETWORK_ERROR);
+}
+
+export const api = {
+  async get(path: string, opts: { auth?: boolean; query?: Record<string, string | undefined> } = {}) {
+    return handle(await send('GET', path + toQuery(opts.query), !!opts.auth));
+  },
+  async post(path: string, body?: any, opts: { auth?: boolean } = {}) {
+    return handle(await send('POST', path, !!opts.auth, body));
+  },
+  async put(path: string, body?: any, opts: { auth?: boolean } = {}) {
+    return handle(await send('PUT', path, !!opts.auth, body));
+  },
+  async patch(path: string, body?: any, opts: { auth?: boolean } = {}) {
+    return handle(await send('PATCH', path, !!opts.auth, body));
+  },
+  async delete(path: string, opts: { auth?: boolean } = {}) {
+    const res = await send('DELETE', path, !!opts.auth);
+    if (res.status === 204) return null;
+    return handle(res);
+  },
+};
+
+######## src/api/profile.ts ########
+import { api } from './client';
+
+export interface GradingSystem {
+  id: string;
+  label: string;
+  input_type: 'percent' | 'number' | 'select';
+  min: number;
+  max: number;
+  options?: string[] | null;
+}
+
+export interface GpaProfile {
+  gpa: number;
+  percent: number;
+  ects: string;
+  system_id: string;
+  system_label: string;
+}
+
+export interface AcademicProfile {
+  level: string;
+  field: string;
+  nationality: string;
+  ielts: number | null;
+  work_years: number;
+  publications: number;
+  leadership: string;
+  volunteering: string;
+  has_cv: boolean;
+  has_sop: boolean;
+  has_recommendation_letters: boolean;
+}
+
+export interface ReadinessCategory { label: string; stars: number; }
+export interface Readiness { overall: number; categories: ReadinessCategory[]; }
+
+export const ProfileApi = {
+  gpaSystems: (): Promise<GradingSystem[]> => api.get('/profile/gpa/systems'),
+
+  convertGpa: (system_id: string, value: string): Promise<{ gpa: number; percent: number; ects: string; percentile_note: string }> =>
+    api.post('/profile/gpa/convert', { system_id, value }),
+
+  saveGpa: (system_id: string, value: string): Promise<GpaProfile> =>
+    api.post('/profile/gpa', { system_id, value }, { auth: true }),
+
+  getGpa: (): Promise<GpaProfile | null> => api.get('/profile/gpa', { auth: true }),
+
+  saveAcademic: (payload: AcademicProfile): Promise<AcademicProfile> =>
+    api.post('/profile/academic', payload, { auth: true }),
+
+  getAcademic: (): Promise<AcademicProfile | null> => api.get('/profile/academic', { auth: true }),
+
+  getReadiness: (): Promise<Readiness | null> => api.get('/profile/readiness', { auth: true }),
+};
+
+
+######## src/api/scholarships.ts ########
+import { api } from './client';
+
+export type SortKey = 'latest' | 'closing';
+
+export interface Scholarship {
+  id: string;
+  name: string;
+  provider: string;
+  country: string;
+  level: string;
+  field: string;
+  funding: string;
+  deadline_window: string;
+  official_link: string;
+  tags: string[];
+  blurb: string;
+  deadline_date?: string | null;   // exact closing date (YYYY-MM-DD) when known
+  source_url?: string | null;
+  last_verified?: string | null;
+  is_active?: boolean;
+  match_score?: number | null;
+  match_tier?: 'green' | 'yellow' | 'red' | null;
+}
+
+export const ScholarshipsApi = {
+  async list(params: { q?: string; region?: string; sort?: SortKey; auth?: boolean } = {}): Promise<Scholarship[]> {
+    return api.get('/scholarships', {
+      auth: !!params.auth,
+      query: {
+        q: params.q,
+        region: params.region && params.region !== 'All' ? params.region : undefined,
+        sort: params.sort,
+      },
+    });
+  },
+
+  async get(id: string, auth = false): Promise<Scholarship> {
+    return api.get(`/scholarships/${id}`, { auth });
+  },
+
+  async create(payload: Omit<Scholarship, 'id' | 'match_score' | 'match_tier'>): Promise<Scholarship> {
+    return api.post('/scholarships', payload, { auth: true });
+  },
+
+  async update(id: string, payload: Omit<Scholarship, 'id' | 'match_score' | 'match_tier'>): Promise<Scholarship> {
+    return api.put(`/scholarships/${id}`, payload, { auth: true });
+  },
+
+  async remove(id: string): Promise<void> {
+    await api.delete(`/scholarships/${id}`, { auth: true });
+  },
+};
+
+######## src/api/settings.ts ########
+import { api } from './client';
+
+export interface AppSettingItem {
+  key: string;
+  value: string | null;
+}
+
+export const SettingsApi = {
+  // No auth needed — used before login to configure ads
+  getPublic: (): Promise<AppSettingItem[]> => api.get('/settings/public'),
+
+  // Admin-only
+  listAll: (): Promise<AppSettingItem[]> => api.get('/settings', { auth: true }),
+  set: (key: string, value: string): Promise<AppSettingItem> =>
+    api.put(`/settings/${key}`, { value }, { auth: true }),
+};
+
+
+######## src/api/tokenStorage.ts ########
+import * as SecureStore from 'expo-secure-store';
+
+const TOKEN_KEY = 'og_access_token';
+
+export const TokenStorage = {
+  async save(token: string): Promise<void> {
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+  },
+  async read(): Promise<string | null> {
+    return SecureStore.getItemAsync(TOKEN_KEY);
+  },
+  async clear(): Promise<void> {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  },
+};
+
+
+######## src/api/tracker.ts ########
+import { api } from './client';
+import { Scholarship } from './scholarships';
+
+export interface TrackerEntry {
+  scholarship_id: string;
+  status: 'saved' | 'applied' | 'interview' | 'accepted' | 'rejected';
+  saved_at: string;
+  scholarship: Scholarship;
+}
+
+export const TrackerApi = {
+  list: (): Promise<TrackerEntry[]> => api.get('/tracker', { auth: true }),
+  add: (scholarshipId: string): Promise<TrackerEntry> => api.post(`/tracker/${scholarshipId}`, undefined, { auth: true }),
+  updateStatus: (scholarshipId: string, status: string): Promise<TrackerEntry> =>
+    api.patch(`/tracker/${scholarshipId}`, { status }, { auth: true }),
+  remove: (scholarshipId: string): Promise<void> => api.delete(`/tracker/${scholarshipId}`, { auth: true }),
+};
+
+export const AdvisorApi = {
+  recommend: async (): Promise<string> => {
+    const res = await api.post('/advisor/recommend', undefined, { auth: true });
+    return res.text;
+  },
+};
+
+
+######## src/context/AuthContext.tsx ########
+import React, { createContext, useCallback, useContext, useState } from 'react';
+import { AppUser, AuthApi } from '../api/auth';
+import { ApiError } from '../api/client';
+import { TokenStorage } from '../api/tokenStorage';
+import { disablePush } from '../notifications/push';
+import { getGoogleIdToken, signOutGoogle } from '../auth/google';
+
+export type LoginResult = 'ok' | 'unverified' | 'error';
+
+interface AuthContextValue {
+  user: AppUser | null;
+  loading: boolean;
+  error: string | null;
+  restoreSession: () => Promise<void>;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  /** Opens the Google sheet. Returns 'ok' on success, 'cancelled' if closed, 'error' otherwise. */
+  loginWithGoogle: () => Promise<'ok' | 'cancelled' | 'error'>;
+  /** Returns true when the confirmation code email has been sent. */
+  signup: (params: { name: string; email: string; password: string }) => Promise<boolean>;
+  /** Confirms the emailed code and logs the user in. */
+  verifyEmail: (email: string, code: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  clearError: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const restoreSession = useCallback(async () => {
+    setLoading(true);
+    const token = await TokenStorage.read();
+    if (token) {
+      const me = await AuthApi.me();
+      setUser(me);
+    }
+    setLoading(false);
+  }, []);
+
+  const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
+    setError(null);
+    try {
+      const u = await AuthApi.login(email, password);
+      setUser(u);
+      return 'ok';
+    } catch (e: any) {
+      // 403 = correct password but email not verified yet
+      if (e instanceof ApiError && e.status === 403) return 'unverified';
+      setError(e.message || 'Login failed');
+      return 'error';
+    }
+  }, []);
+
+  const loginWithGoogle = useCallback(async (): Promise<'ok' | 'cancelled' | 'error'> => {
+    setError(null);
+    try {
+      const idToken = await getGoogleIdToken();
+      if (!idToken) return 'cancelled';
+      const u = await AuthApi.googleLogin(idToken);
+      setUser(u);
+      return 'ok';
+    } catch (e: any) {
+      setError(e?.message || 'Google sign-in failed');
+      return 'error';
+    }
+  }, []);
+
+  const signup = useCallback(async (params: { name: string; email: string; password: string }) => {
+    setError(null);
+    try {
+      await AuthApi.signup(params);
+      return true;
+    } catch (e: any) {
+      setError(e.message || 'Signup failed');
+      return false;
+    }
+  }, []);
+
+  const verifyEmail = useCallback(async (email: string, code: string) => {
+    setError(null);
+    try {
+      const u = await AuthApi.verifyEmail(email, code);
+      setUser(u);
+      return true;
+    } catch (e: any) {
+      setError(e.message || 'Verification failed');
+      return false;
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    await disablePush(); // must run while the login token is still valid
+    await signOutGoogle();
+    await AuthApi.logout();
+    setUser(null);
+  }, []);
+
+  const clearError = useCallback(() => setError(null), []);
+
+  return (
+    <AuthContext.Provider value={{ user, loading, error, restoreSession, login, loginWithGoogle, signup, verifyEmail, logout, clearError }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}
+
+
+######## src/navigation/MainTabs.tsx ########
+import React from 'react';
+import { View } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../theme/colors';
+import HomeScreen from '../screens/home/HomeScreen';
+import MatchScreen from '../screens/match/MatchScreen';
+import TrackerScreen from '../screens/tracker/TrackerScreen';
+import AdvisorHub from '../screens/advisor/AdvisorHub';
+import ProfileScreen from '../screens/profile/ProfileScreen';
+
+const Tab = createBottomTabNavigator();
+
+/**
+ * Android 15+ (target SDK 35/36) draws apps edge to edge, so the status bar sits on top of the
+ * screen content. These tab screens have no header, so we leave room for the status bar here,
+ * once, instead of in every screen.
+ */
+function withTopInset(Screen: React.ComponentType<any>) {
+  function WithTopInset(props: any) {
+    const insets = useSafeAreaInsets();
+    return (
+      <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.bg }}>
+        <Screen {...props} />
+      </View>
+    );
+  }
+  WithTopInset.displayName = `WithTopInset(${Screen.displayName || Screen.name || 'Screen'})`;
+  return WithTopInset;
+}
+
+const HomeTabScreen = withTopInset(HomeScreen);
+const MatchTabScreen = withTopInset(MatchScreen);
+const TrackerTabScreen = withTopInset(TrackerScreen);
+const AdvisorTabScreen = withTopInset(AdvisorHub);
+const ProfileTabScreen = withTopInset(ProfileScreen);
+
+const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  HomeTab: 'home',
+  MatchTab: 'flash',
+  TrackerTab: 'list',
+  AdvisorTab: 'chatbubble',
+  ProfileTab: 'person',
+};
+const ICONS_OUTLINE: Record<string, keyof typeof Ionicons.glyphMap> = {
+  HomeTab: 'home-outline',
+  MatchTab: 'flash-outline',
+  TrackerTab: 'list-outline',
+  AdvisorTab: 'chatbubble-outline',
+  ProfileTab: 'person-outline',
+};
+
+export function MainTabs() {
+  return (
+    <Tab.Navigator id={undefined}
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: colors.blue,
+        tabBarInactiveTintColor: colors.inkFaint,
+        tabBarStyle: { backgroundColor: '#fff', borderTopColor: colors.line },
+        tabBarIcon: ({ focused, color, size }) => {
+          const name = focused ? ICONS[route.name] : ICONS_OUTLINE[route.name];
+          return <Ionicons name={name} size={size} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen name="HomeTab" component={HomeTabScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="MatchTab" component={MatchTabScreen} options={{ title: 'Match' }} />
+      <Tab.Screen name="TrackerTab" component={TrackerTabScreen} options={{ title: 'Tracker' }} />
+      <Tab.Screen name="AdvisorTab" component={AdvisorTabScreen} options={{ title: 'Advisor' }} />
+      <Tab.Screen name="ProfileTab" component={ProfileTabScreen} options={{ title: 'Profile' }} />
+    </Tab.Navigator>
+  );
+}
+
+
+######## src/navigation/RootNavigator.tsx ########
+import React from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { MainTabs } from './MainTabs';
+import LoginScreen from '../screens/auth/LoginScreen';
+import SignupScreen from '../screens/auth/SignupScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
+import GpaConverterScreen from '../screens/profile/GpaConverterScreen';
+import ScholarshipDetailScreen from '../screens/scholarship/ScholarshipDetailScreen';
+import AdvisorChatScreen from '../screens/advisor/AdvisorChatScreen';
+import { AdminScreen, ScholarshipFormScreen } from '../screens/admin/AdminScreen';
+import AppSettingsScreen from '../screens/admin/AppSettingsScreen';
+import { colors } from '../theme/colors';
+import NotificationBridge from '../notifications/NotificationBridge';
+
+const Stack = createNativeStackNavigator();
+
+export function RootNavigator() {
+  return (
+    <>
+    <NotificationBridge />
+    <Stack.Navigator id={undefined} screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Main" component={MainTabs} />
+      <Stack.Screen
+        name="Login" component={LoginScreen}
+        options={{ headerShown: true, title: '', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false }}
+      />
+      <Stack.Screen
+        name="Signup" component={SignupScreen}
+        options={{ headerShown: true, title: '', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false }}
+      />
+      <Stack.Screen
+        name="VerifyEmail" component={VerifyEmailScreen}
+        options={{ headerShown: true, title: '', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false }}
+      />
+      <Stack.Screen
+        name="ForgotPassword" component={ForgotPasswordScreen}
+        options={{ headerShown: true, title: '', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false }}
+      />
+      <Stack.Screen
+        name="ScholarshipDetail" component={ScholarshipDetailScreen}
+        options={{ headerShown: true, title: 'Scholarship', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false }}
+      />
+      <Stack.Screen
+        name="AdvisorChat" component={AdvisorChatScreen}
+        options={{ headerShown: true, title: 'Advisor chat', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false }}
+      />
+      <Stack.Screen name="GpaConverter" component={GpaConverterScreen} />
+      <Stack.Screen name="Admin" component={AdminScreen} />
+      <Stack.Screen name="AppSettings" component={AppSettingsScreen} />
+      <Stack.Screen name="ScholarshipForm" component={ScholarshipFormScreen} />
+    </Stack.Navigator>
+    </>
+  );
+}
+
+
+######## src/theme ########
+
+
+######## src/theme/colors.ts ########
+export const colors = {
+  bg: '#EEF1FB',
+  card: '#FFFFFF',
+  ink: '#14161B',
+  inkSoft: '#6B7280',
+  inkFaint: '#9CA3AF',
+  blue: '#3358F0',
+  blueDark: '#1E3FC4',
+  blueTint: '#E7ECFD',
+  line: '#E7E9F5',
+  pill: '#EDF0FD',
+  green: '#16A34A',
+  greenTint: '#DCFCE7',
+  amber: '#D97706',
+  amberTint: '#FEF3C7',
+  gold: '#B8860B',
+  red: '#DC2626',
+  redTint: '#FEE2E2',
+  grayTint: '#F1F2F6',
+};
+
+// Inter is used as the open-source substitute for SF Pro (Apple's system
+// font can't be bundled outside Apple's own platforms). Loaded via
+// @expo-google-fonts/inter — see App.tsx for the useFonts() call.
+export const fonts = {
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  semiBold: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
+  extraBold: 'Inter_800ExtraBold',
+};
+
+
+######## src/{config,theme,api,context,navigation,screens ########
+
+
+######## src/screens/home ########
+
+
+######## src/screens/home/HomeScreen.tsx ########
+import React, { useEffect } from 'react';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { colors, fonts } from '../../theme/colors';
+import { useAuth } from '../../context/AuthContext';
+import { useScholarships } from '../../context/ScholarshipContext';
+import { useTracker } from '../../context/TrackerContext';
+import { ScholarshipCard } from '../../components/ScholarshipCard';
+import { AdBanner } from '../../components/AdBanner';
+
+const REGIONS = ['All', 'UK', 'USA', 'Europe', 'Africa', 'Asia', 'Other'];
+
+export default function HomeScreen() {
+  const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const scholarships = useScholarships();
+  const tracker = useTracker();
+
+  useEffect(() => {
+    scholarships.fetch(!!user);
+    if (user) tracker.fetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const onSearch = (text: string) => {
+    scholarships.setQuery(text);
+  };
+
+  useEffect(() => {
+    const t = setTimeout(() => scholarships.fetch(!!user), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scholarships.query, scholarships.region]);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* Sticky header: stays in place while only the scholarship cards scroll */}
+      <View style={styles.stickyHeader}>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={styles.eyebrow}>Explore Scholarships</Text>
+            <Text style={styles.heading} numberOfLines={1} adjustsFontSizeToFit>Find Your Scholarship</Text>
+          </View>
+          {user ? (
+            <Pressable style={styles.avatar} onPress={() => navigation.navigate('ProfileTab')}>
+              <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
+            </Pressable>
+          ) : (
+            <Pressable style={styles.loginBtn} onPress={() => navigation.navigate('Login')}>
+              <Ionicons name="log-in-outline" size={20} color="#fff" />
+            </Pressable>
+          )}
+        </View>
+
+        <Text style={styles.sectionTitle}>Latest Scholarships</Text>
+        <Text style={styles.sectionSub}>{scholarships.items.length} opportunities worldwide</Text>
+
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={17} color={colors.inkFaint} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search scholarships, countries…"
+            value={scholarships.query}
+            onChangeText={onSearch}
+          />
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {REGIONS.map((r) => {
+            const active = scholarships.region === r;
+            return (
+              <Pressable
+                key={r}
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => scholarships.setRegion(r)}
+              >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{r}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Only this list scrolls */}
+      <FlatList
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+        data={scholarships.items}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={
+          <View>
+            {!user && (
+              <Pressable style={styles.ctaBanner} onPress={() => navigation.navigate('Signup')}>
+                <View style={styles.ctaIcon}><Ionicons name="lock-open-outline" size={19} color="#fff" /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.ctaTitle}>Create a free account</Text>
+                  <Text style={styles.ctaSub}>Unlock Match scores, Tracker, Advisor & more</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
+              </Pressable>
+            )}
+            {scholarships.loading && <ActivityIndicator style={{ marginVertical: 20 }} color={colors.blue} />}
+            <AdBanner />
+          </View>
+        }
+        renderItem={({ item }) => (
+          <ScholarshipCard
+            scholarship={item}
+            showMatch={!!user}
+            isBookmarked={tracker.isTracked(item.id)}
+            onToggleBookmark={() => {
+              if (!user) { navigation.navigate('Signup'); return; }
+              tracker.toggle(item.id);
+            }}
+          />
+        )}
+        ListEmptyComponent={!scholarships.loading ? (
+          <Text style={styles.empty}>No scholarships match those filters yet.</Text>
+        ) : null}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  stickyHeader: {
+    backgroundColor: colors.bg,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.line,
+  },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+  eyebrow: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSoft },
+  heading: { fontFamily: fonts.extraBold, fontSize: 25, color: colors.ink },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.blueTint, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontFamily: fonts.extraBold, fontSize: 16, color: colors.blue },
+  loginBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.blue, alignItems: 'center', justifyContent: 'center' },
+  ctaBanner: { backgroundColor: colors.blue, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 22 },
+  ctaIcon: { width: 38, height: 38, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  ctaTitle: { fontFamily: fonts.extraBold, fontSize: 15.5, color: '#fff', marginBottom: 2 },
+  ctaSub: { fontFamily: fonts.regular, fontSize: 12.5, color: 'rgba(255,255,255,0.8)' },
+  sectionTitle: { fontFamily: fonts.extraBold, fontSize: 19, color: colors.ink },
+  sectionSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSoft, marginBottom: 10 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.pill, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 10 },
+  searchInput: { flex: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
+  chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.pill, marginRight: 8 },
+  chipActive: { backgroundColor: colors.blue },
+  chipText: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.blue },
+  chipTextActive: { color: '#fff' },
+  empty: { textAlign: 'center', color: colors.inkSoft, fontFamily: fonts.regular, fontSize: 13.5, paddingVertical: 40 },
+});
+
+######## src/screens/scholarship/ScholarshipDetailScreen.tsx ########
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRoute } from '@react-navigation/native';
+import { colors, fonts } from '../../theme/colors';
+import { Scholarship, ScholarshipsApi } from '../../api/scholarships';
+import { useInterstitialAd } from '../../hooks/useInterstitialAd';
+import ShareButton from '../../components/ShareButton';
+
+/**
+ * Opens when someone taps a shared link (https://opportunitygenie.org/s/<id>).
+ * This is where the official application link is used: applying happens only inside the app.
+ */
+export default function ScholarshipDetailScreen() {
+  const route = useRoute<any>();
+  const id: string | undefined = route.params?.id;
+  const { showIfFirstTimeThisSession } = useInterstitialAd();
+
+  const [scholarship, setScholarship] = useState<Scholarship | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!id) {
+      setFailed(true);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setFailed(false);
+    try {
+      setScholarship(await ScholarshipsApi.get(id));
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleApply = () => {
+    if (!scholarship) return;
+    showIfFirstTimeThisSession(); // fires at most once per app session; no-op otherwise
+    Linking.openURL(scholarship.official_link);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={colors.blue} />
+      </View>
+    );
+  }
+
+  if (failed || !scholarship) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorTitle}>We couldn't load this scholarship</Text>
+        <Text style={styles.errorSub}>It may have been removed, or your connection dropped.</Text>
+        <Pressable style={styles.retryBtn} onPress={load}>
+          <Text style={styles.retryBtnText}>Try again</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }}>
+      <View style={styles.card}>
+        <Text style={styles.title}>{scholarship.name}</Text>
+        <Text style={styles.provider}>{scholarship.provider}</Text>
+
+        <Text style={styles.blurb}>{scholarship.blurb}</Text>
+
+        <View style={styles.metaRow}>
+          <View style={styles.metaItem}>
+            <Ionicons name="location-outline" size={13} color={colors.inkSoft} />
+            <Text style={styles.metaText}>{scholarship.country}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="cash-outline" size={13} color={colors.inkSoft} />
+            <Text style={styles.metaText}>{scholarship.funding}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="time-outline" size={13} color={colors.inkSoft} />
+            <Text style={styles.metaText}>{scholarship.deadline_window}</Text>
+          </View>
+        </View>
+
+        {scholarship.tags && scholarship.tags.length > 0 && (
+          <View style={styles.tagRow}>
+            {scholarship.tags.map((t) => (
+              <View key={t} style={styles.tag}>
+                <Text style={styles.tagText}>{t}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <View style={styles.actionRow}>
+          <Pressable style={styles.applyBtn} onPress={handleApply}>
+            <Text style={styles.applyBtnText}>Apply on official site</Text>
+          </Pressable>
+          <ShareButton scholarship={scholarship} />
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  center: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  errorTitle: { fontFamily: fonts.extraBold, fontSize: 17, color: colors.ink, marginBottom: 6, textAlign: 'center' },
+  errorSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSoft, textAlign: 'center', marginBottom: 16 },
+  retryBtn: { backgroundColor: colors.blue, borderRadius: 10, paddingVertical: 11, paddingHorizontal: 22 },
+  retryBtnText: { fontFamily: fonts.bold, fontSize: 13.5, color: '#fff' },
+  card: {
+    backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.line, padding: 18,
+  },
+  title: { fontFamily: fonts.extraBold, fontSize: 19, color: colors.ink, marginBottom: 2 },
+  provider: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSoft },
+  blurb: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkSoft, marginTop: 10, marginBottom: 14, lineHeight: 21 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginBottom: 12 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  metaText: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.inkSoft },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 14 },
+  tag: { backgroundColor: colors.blueTint, borderRadius: 20, paddingHorizontal: 11, paddingVertical: 4 },
+  tagText: { fontFamily: fonts.bold, fontSize: 11.5, color: colors.blue },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  applyBtn: { flex: 1, backgroundColor: colors.blue, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  applyBtnText: { fontFamily: fonts.bold, fontSize: 13.5, color: '#fff' },
+});
+
+
+######## src/components/ScholarshipCard.tsx ########
+import React from 'react';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, fonts } from '../theme/colors';
+import { Scholarship } from '../api/scholarships';
+import { useInterstitialAd } from '../hooks/useInterstitialAd';
+import ShareButton from './ShareButton';
+
+function matchColor(tier?: string | null): string {
+  if (tier === 'green') return colors.green;
+  if (tier === 'yellow') return colors.amber;
+  if (tier === 'red') return colors.red;
+  return colors.blue;
+}
+
+export function ScholarshipCard({
+  scholarship, isBookmarked, showMatch, onToggleBookmark,
+}: {
+  scholarship: Scholarship;
+  isBookmarked?: boolean;
+  showMatch?: boolean;
+  onToggleBookmark?: () => void;
+}) {
+  const { showIfFirstTimeThisSession } = useInterstitialAd();
+
+  const handleApply = () => {
+    showIfFirstTimeThisSession(); // fires at most once per app session; no-op otherwise
+    Linking.openURL(scholarship.official_link);
+  };
+  return (
+    <View style={styles.card}>
+      <View style={styles.topRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>{scholarship.name}</Text>
+          <Text style={styles.provider}>{scholarship.provider}</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end', gap: 8 }}>
+          {showMatch && scholarship.match_score != null && (
+            <Text style={[styles.matchPct, { color: matchColor(scholarship.match_tier) }]}>
+              {scholarship.match_score}%
+            </Text>
+          )}
+          <Pressable
+            onPress={onToggleBookmark}
+            style={[styles.bookmarkBtn, isBookmarked && { backgroundColor: colors.blue, borderColor: colors.blue }]}
+          >
+            <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={15} color={isBookmarked ? '#fff' : colors.inkSoft} />
+          </Pressable>
+        </View>
+      </View>
+
+      <Text style={styles.blurb}>{scholarship.blurb}</Text>
+
+      <View style={styles.metaRow}>
+        <View style={styles.metaItem}>
+          <Ionicons name="location-outline" size={13} color={colors.inkSoft} />
+          <Text style={styles.metaText}>{scholarship.country}</Text>
+        </View>
+        <View style={styles.metaItem}>
+          <Ionicons name="cash-outline" size={13} color={colors.inkSoft} />
+          <Text style={styles.metaText}>{scholarship.funding}</Text>
+        </View>
+        <View style={styles.metaItem}>
+          <Ionicons name="time-outline" size={13} color={colors.inkSoft} />
+          <Text style={styles.metaText}>{scholarship.deadline_window}</Text>
+        </View>
+      </View>
+
+      {scholarship.tags?.length > 0 && (
+        <View style={styles.tagRow}>
+          {scholarship.tags.map((t) => (
+            <View key={t} style={styles.tag}>
+              <Text style={styles.tagText}>{t}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      <View style={styles.actionRow}>
+        <Pressable style={styles.applyBtn} onPress={handleApply}>
+          <Text style={styles.applyBtnText}>Apply on official site</Text>
+        </Pressable>
+        <ShareButton scholarship={scholarship} />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.line,
+    padding: 18, marginBottom: 14,
+  },
+  topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  title: { fontFamily: fonts.extraBold, fontSize: 16.5, color: colors.ink, marginBottom: 2 },
+  provider: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.inkSoft },
+  matchPct: { fontFamily: fonts.extraBold, fontSize: 17 },
+  bookmarkBtn: {
+    width: 30, height: 30, borderRadius: 15, borderWidth: 1, borderColor: colors.line,
+    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+  },
+  blurb: { fontFamily: fonts.regular, fontSize: 13.5, color: colors.inkSoft, marginTop: 8, marginBottom: 12, lineHeight: 20 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginBottom: 12 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  metaText: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.inkSoft },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 12 },
+  tag: { backgroundColor: colors.blueTint, borderRadius: 20, paddingHorizontal: 11, paddingVertical: 4 },
+  tagText: { fontFamily: fonts.bold, fontSize: 11.5, color: colors.blue },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  applyBtn: { flex: 1, backgroundColor: colors.blue, borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
+  applyBtnText: { fontFamily: fonts.bold, fontSize: 13.5, color: '#fff' },
+});

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
 import { AdvisorApi } from '../../api/tracker';
 import { FeatureGate } from '../../components/FeatureGate';
+import { AdBanner } from '../../components/AdBanner';
 
 export default function AdvisorScreen() {
   const { user } = useAuth();
@@ -36,6 +37,7 @@ export default function AdvisorScreen() {
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
       <Text style={styles.eyebrow}>Ask anything</Text>
       <Text style={styles.heading}>Advisor</Text>
+      <AdBanner />
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Personalized recommendations</Text>

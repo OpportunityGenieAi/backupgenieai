@@ -5,6 +5,8 @@ import { colors, fonts } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 import { useTracker } from '../../context/TrackerContext';
 import { FeatureGate } from '../../components/FeatureGate';
+import { AdBanner } from '../../components/AdBanner';
+import { useShowAdOnFocus } from '../../hooks/useInterstitialAd';
 
 const STATUSES = ['saved', 'applied', 'interview', 'accepted', 'rejected'];
 
@@ -21,6 +23,7 @@ function statusColor(status: string) {
 export default function TrackerScreen() {
   const { user } = useAuth();
   const tracker = useTracker();
+  useShowAdOnFocus();
 
   useEffect(() => {
     if (user) tracker.fetch();
@@ -45,6 +48,7 @@ export default function TrackerScreen() {
         <View>
           <Text style={styles.eyebrow}>Your applications</Text>
           <Text style={styles.heading}>Tracker</Text>
+          <AdBanner />
         </View>
       }
       ListEmptyComponent={

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fonts } from '../theme/colors';
+import { AdBanner } from './AdBanner';
 
 export function FeatureGate({ title, body }: { title: string; body: string }) {
   const navigation = useNavigation<any>();
@@ -19,6 +20,9 @@ export function FeatureGate({ title, body }: { title: string; body: string }) {
       <Pressable onPress={() => navigation.navigate('Login')}>
         <Text style={styles.linkBtnText}>I already have an account</Text>
       </Pressable>
+      <View style={{ marginTop: 18, alignSelf: 'stretch' }}>
+        <AdBanner />
+      </View>
     </View>
   );
 }

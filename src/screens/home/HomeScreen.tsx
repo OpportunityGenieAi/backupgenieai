@@ -11,6 +11,9 @@ import { AdBanner } from '../../components/AdBanner';
 
 const REGIONS = ['All', 'UK', 'USA', 'Europe', 'Africa', 'Asia', 'Other'];
 
+// Banner after these list positions (0-based: 4 = after the 5th scholarship). Value = reload stagger in ms.
+const MID_ADS: Record<number, number> = { 4: 20000, 9: 40000 };
+
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
@@ -109,20 +112,24 @@ export default function HomeScreen() {
             <AdBanner />
           </View>
         }
-        renderItem={({ item }) => (
-          <ScholarshipCard
-            scholarship={item}
-            showMatch={!!user}
-            isBookmarked={tracker.isTracked(item.id)}
-            onToggleBookmark={() => {
-              if (!user) { navigation.navigate('Signup'); return; }
-              tracker.toggle(item.id);
-            }}
-          />
+        renderItem={({ item, index }) => (
+          <View>
+            <ScholarshipCard
+              scholarship={item}
+              showMatch={!!user}
+              isBookmarked={tracker.isTracked(item.id)}
+              onToggleBookmark={() => {
+                if (!user) { navigation.navigate('Signup'); return; }
+                tracker.toggle(item.id);
+              }}
+            />
+            {MID_ADS[index] !== undefined ? <AdBanner offsetMs={MID_ADS[index]} /> : null}
+          </View>
         )}
         ListEmptyComponent={!scholarships.loading ? (
           <Text style={styles.empty}>No scholarships match those filters yet.</Text>
         ) : null}
+        ListFooterComponent={scholarships.items.length > 0 ? <AdBanner offsetMs={60000} /> : null}
       />
     </View>
   );
