@@ -40,16 +40,16 @@ function ensureAd(unitId: string) {
 }
 
 export function useInterstitialAd() {
-  const { adsEnabled, interstitialUnitId } = usePublicSettings();
+  const { adsEnabled, sdkReady, interstitialUnitId } = usePublicSettings();
   const [, force] = useState(0);
 
   useEffect(() => {
-    if (!adsEnabled) return;
+    if (!adsEnabled || !sdkReady) return;
     ensureAd(interstitialUnitId);
     const l = () => force((n) => n + 1);
     listeners.add(l);
     return () => { listeners.delete(l); };
-  }, [adsEnabled, interstitialUnitId]);
+  }, [adsEnabled, sdkReady, interstitialUnitId]);
 
   /** Shows the shared ad if one is ready and the cooldown has passed. */
   const tryShow = useCallback((minGapMs: number = MIN_GAP_MS) => {

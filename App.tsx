@@ -19,6 +19,7 @@ import { ProfileProvider } from './src/context/ProfileContext';
 import { ScholarshipProvider } from './src/context/ScholarshipContext';
 import { TrackerProvider } from './src/context/TrackerContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import AppOpenManager from './src/hooks/useAppOpenAd';
 
 // Shared links (https://opportunitygenie.org/s/<id>) open the scholarship inside the app.
 // "Main" stays underneath so the back button leads to the home tabs.
@@ -61,21 +62,22 @@ export default function App() {
 
   return (
     <PublicSettingsProvider>
-    <AuthProvider>
-      <ProfileProvider>
-        <ScholarshipProvider>
-          <TrackerProvider>
-            <SessionGate>
-              <NavigationContainer linking={linking}>
-                <StatusBar style="dark" />
-                <RootNavigator />
-              </NavigationContainer>
-            </SessionGate>
-            {!introFinished && <AnimatedSplashScreen onFinish={() => setIntroFinished(true)} />}
-          </TrackerProvider>
-        </ScholarshipProvider>
-      </ProfileProvider>
-    </AuthProvider>
+      <AuthProvider>
+        <ProfileProvider>
+          <ScholarshipProvider>
+            <TrackerProvider>
+              <SessionGate>
+                <NavigationContainer linking={linking}>
+                  <StatusBar style="dark" />
+                  <AppOpenManager />
+                  <RootNavigator />
+                </NavigationContainer>
+              </SessionGate>
+              {!introFinished && <AnimatedSplashScreen onFinish={() => setIntroFinished(true)} />}
+            </TrackerProvider>
+          </ScholarshipProvider>
+        </ProfileProvider>
+      </AuthProvider>
     </PublicSettingsProvider>
   );
 }

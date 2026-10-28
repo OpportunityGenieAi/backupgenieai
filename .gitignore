@@ -18,3 +18,8 @@ credentials/
 *.jks
 app.json.bak
 config-output.txt
+*.bak
+*.bak2
+*.aab
+bundletool.jar
+*_context.txt
