@@ -1,14 +1,29 @@
 export const colors = {
-  bg: '#EEF1FB',
+  // Surfaces
+  bg: '#F5F7FC',
   card: '#FFFFFF',
-  ink: '#14161B',
-  inkSoft: '#6B7280',
-  inkFaint: '#9CA3AF',
-  blue: '#3358F0',
-  blueDark: '#1E3FC4',
-  blueTint: '#E7ECFD',
-  line: '#E7E9F5',
-  pill: '#EDF0FD',
+  white: '#FFFFFF',
+
+  // Text
+  ink: '#172554',
+  inkSoft: '#64748B',
+  inkFaint: '#94A3B8',
+
+  // Brand
+  blue: '#3157E8',
+  blueDark: '#2441C4',
+  blueTint: '#E6ECFD',
+  teal: '#14B8A6',
+  tealDark: '#0F8F82',
+  tealTint: '#CCFBF1',
+  navy: '#172554',
+
+  // Lines and fills
+  line: '#E3E8F4',
+  pill: '#E9EEF8',
+  grayTint: '#F1F4FA',
+
+  // Status
   green: '#16A34A',
   greenTint: '#DCFCE7',
   amber: '#D97706',
@@ -16,7 +31,25 @@ export const colors = {
   gold: '#B8860B',
   red: '#DC2626',
   redTint: '#FEE2E2',
-  grayTint: '#F1F2F6',
+};
+
+export const radius = {
+  sm: 10,
+  md: 14,
+  lg: 20,
+  xl: 28,
+  pill: 999,
+};
+
+// Soft card shadow that works on both Android (elevation) and iOS.
+export const shadow = {
+  card: {
+    shadowColor: '#172554',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
 };
 
 // Inter is used as the open-source substitute for SF Pro (Apple's system
