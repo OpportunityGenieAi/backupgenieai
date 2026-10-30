@@ -1,27 +1,27 @@
 export const colors = {
   // Surfaces
-  bg: '#F5F7FC',
+  bg: '#F3F5FB',
   card: '#FFFFFF',
   white: '#FFFFFF',
 
   // Text
-  ink: '#172554',
-  inkSoft: '#64748B',
-  inkFaint: '#94A3B8',
+  ink: '#12332E',
+  inkSoft: '#5B6B73',
+  inkFaint: '#8A98A0',
 
-  // Brand
-  blue: '#3157E8',
-  blueDark: '#2441C4',
-  blueTint: '#E6ECFD',
-  teal: '#14B8A6',
-  tealDark: '#0F8F82',
-  tealTint: '#CCFBF1',
-  navy: '#172554',
+  // Brand (the name "blue" now holds the deep teal from your reference photo)
+  blue: '#1F8A7A',
+  blueDark: '#176B5F',
+  blueTint: '#D8F0EA',
+  teal: '#2FB8A0',
+  tealDark: '#176B5F',
+  tealTint: '#D8F0EA',
+  navy: '#12423B',
 
   // Lines and fills
-  line: '#E3E8F4',
-  pill: '#E9EEF8',
-  grayTint: '#F1F4FA',
+  line: '#E3E8F2',
+  pill: '#E4ECEA',
+  grayTint: '#F1F4F7',
 
   // Status
   green: '#16A34A',
@@ -44,7 +44,7 @@ export const radius = {
 // Soft card shadow that works on both Android (elevation) and iOS.
 export const shadow = {
   card: {
-    shadowColor: '#172554',
+    shadowColor: '#12423B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,

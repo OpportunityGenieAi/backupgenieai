@@ -48,7 +48,7 @@ export default function HomeScreen() {
 
       {/* Sticky header: stays in place while only the scholarship cards scroll */}
       <View>
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
           <View style={styles.headerRow}>
             <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={styles.eyebrow}>{user ? `Hi, ${firstName} 👋` : 'Welcome 👋'}</Text>
@@ -102,7 +102,7 @@ export default function HomeScreen() {
       {/* Only this list scrolls */}
       <FlatList
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 6, paddingBottom: 100 }}
         keyboardShouldPersistTaps="handled"
         data={scholarships.items}
         keyExtractor={(item) => item.id}
@@ -156,14 +156,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.blue,
-    paddingHorizontal: 20,
-    paddingBottom: 22,
+    paddingHorizontal: 26,
+    paddingBottom: 26,
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
   },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
   eyebrow: { fontFamily: fonts.medium, fontSize: 13.5, color: 'rgba(255,255,255,0.8)', marginBottom: 2 },
-  heading: { fontFamily: fonts.extraBold, fontSize: 25, color: '#fff' },
+  heading: { fontFamily: fonts.extraBold, fontSize: 23, color: '#fff' },
   avatar: {
     width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff',
     alignItems: 'center', justifyContent: 'center',
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   searchInput: { flex: 1, fontFamily: fonts.regular, fontSize: 14.5, color: colors.ink, padding: 0 },
-  chipRow: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10 },
+  chipRow: { paddingHorizontal: 26, paddingTop: 18, paddingBottom: 10 },
   chip: {
     paddingHorizontal: 18, paddingVertical: 9, borderRadius: radius.pill,
     backgroundColor: colors.pill, marginRight: 8,

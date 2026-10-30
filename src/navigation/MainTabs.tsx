@@ -16,7 +16,7 @@ const Tab = createBottomTabNavigator();
  * Android 15+ (target SDK 35/36) draws apps edge to edge, so the status bar sits on top of the
  * screen content. These tab screens have no header, so we leave room for the status bar here,
  * once, instead of in every screen.
- * HomeScreen is the exception: its blue header extends under the status bar and adds the inset itself.
+ * HomeScreen is the exception: its header extends under the status bar and adds the inset itself.
  */
 function withTopInset(Screen: React.ComponentType<any>) {
   function WithTopInset(props: any) {
@@ -53,36 +53,41 @@ const ICONS_OUTLINE: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 export function MainTabs() {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 8);
+
   return (
     <Tab.Navigator id={undefined}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.blue,
-        tabBarInactiveTintColor: colors.inkFaint,
+        tabBarInactiveTintColor: colors.inkSoft,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: '#fff',
           borderTopWidth: 0,
-          paddingTop: 6,
-          elevation: 12,
+          height: 64 + bottomPad,
+          paddingTop: 8,
+          paddingBottom: bottomPad,
+          elevation: 14,
           shadowColor: colors.navy,
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.08,
+          shadowOpacity: 0.1,
           shadowRadius: 12,
         },
-        tabBarLabelStyle: { fontFamily: fonts.semiBold, fontSize: 11.5 },
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarLabelStyle: { fontFamily: fonts.bold, fontSize: 12, marginTop: 2 },
+        tabBarIcon: ({ focused, color }) => {
           const name = focused ? ICONS[route.name] : ICONS_OUTLINE[route.name];
           return (
             <View
               style={{
-                paddingHorizontal: 16,
-                paddingVertical: 3,
+                paddingHorizontal: 18,
+                paddingVertical: 4,
                 borderRadius: 999,
                 backgroundColor: focused ? colors.blueTint : 'transparent',
               }}
             >
-              <Ionicons name={name} size={size} color={color} />
+              <Ionicons name={name} size={23} color={color} />
             </View>
           );
         },

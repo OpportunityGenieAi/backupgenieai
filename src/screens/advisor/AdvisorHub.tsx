@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fonts } from '../../theme/colors';
+import { colors, fonts, radius, shadow } from '../../theme/colors';
 import AdvisorScreen from './AdvisorScreen';
 import { useShowAdOnFocus } from '../../hooks/useInterstitialAd';
 
@@ -21,13 +21,15 @@ export default function AdvisorHub() {
       </View>
 
       <Pressable
-        style={styles.bar}
+        style={({ pressed }) => [styles.bar, pressed && { opacity: 0.92 }]}
         onPress={() => navigation.navigate('AdvisorChat')}
         accessibilityRole="button"
         accessibilityLabel="Chat with the advisor"
       >
-        <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.blue} />
-        <Text style={styles.barText}>Ask a question or paste your statement…</Text>
+        <View style={styles.barIcon}>
+          <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.blue} />
+        </View>
+        <Text style={styles.barText} numberOfLines={1}>Ask a question or paste your statement…</Text>
         <View style={styles.barSend}>
           <Ionicons name="arrow-up" size={18} color="#fff" />
         </View>
@@ -43,22 +45,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginHorizontal: 14,
+    marginHorizontal: 18,
     marginTop: 6,
-    marginBottom: 10,
-    paddingLeft: 14,
-    paddingRight: 6,
-    paddingVertical: 6,
+    marginBottom: 12,
+    paddingLeft: 8,
+    paddingRight: 8,
+    paddingVertical: 8,
     backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: colors.blue,
-    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.pill,
+    ...shadow.card,
   },
-  barText: { flex: 1, fontFamily: fonts.regular, fontSize: 13.5, color: colors.inkSoft },
+  barIcon: {
+    width: 34, height: 34, borderRadius: 17, backgroundColor: colors.blueTint,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  barText: { flex: 1, fontFamily: fonts.medium, fontSize: 13.5, color: colors.inkSoft },
   barSend: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.blue,
     alignItems: 'center',
     justifyContent: 'center',

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fonts } from '../../theme/colors';
+import { colors, fonts, radius, shadow } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useTracker } from '../../context/TrackerContext';
@@ -11,6 +12,20 @@ import { FeatureGate } from '../../components/FeatureGate';
 const LEVELS = ['Undergraduate', "Master's", 'PhD', 'Postdoc'];
 const LEADERSHIP = ['None', 'Some', 'Extensive'];
 const VOLUNTEERING = ['None', 'Occasional', 'Regular'];
+
+function CardHeader({ icon, title, sub }: { icon: keyof typeof Ionicons.glyphMap; title: string; sub?: string }) {
+  return (
+    <View style={styles.cardHead}>
+      <View style={styles.cardIcon}>
+        <Ionicons name={icon} size={18} color={colors.blue} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        {!!sub && <Text style={styles.cardSub}>{sub}</Text>}
+      </View>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -81,37 +96,40 @@ export default function ProfileScreen() {
     tracker.reset();
   };
 
-  return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-      <Text style={styles.eyebrow}>Your account</Text>
-      <Text style={styles.heading}>Profile</Text>
+  const switchProps = {
+    trackColor: { false: colors.line, true: colors.teal },
+    thumbColor: '#fff',
+  };
 
-      <View style={styles.card}>
-        <View style={styles.profileHead}>
-          <View style={styles.bigAvatar}><Text style={styles.bigAvatarText}>{user.name.charAt(0).toUpperCase()}</Text></View>
-          <View>
-            <Text style={styles.userName}>{user.name}</Text>
-            <Text style={styles.userEmail}>{user.email}</Text>
-          </View>
+  return (
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 18, paddingBottom: 100 }}>
+      {/* Hero */}
+      <View style={styles.hero}>
+        <View style={styles.bigAvatar}>
+          <Text style={styles.bigAvatarText}>{user.name.charAt(0).toUpperCase()}</Text>
         </View>
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+        <Text style={styles.userName}>{user.name}</Text>
+        <Text style={styles.userEmail}>{user.email}</Text>
+        <View style={styles.heroBtns}>
           {user.is_admin && (
-            <Pressable style={styles.outlineBtn} onPress={() => navigation.navigate('Admin')}>
-              <Text style={styles.outlineBtnText}>Admin console</Text>
+            <Pressable style={styles.heroBtn} onPress={() => navigation.navigate('Admin')}>
+              <Ionicons name="shield-checkmark-outline" size={15} color="#fff" />
+              <Text style={styles.heroBtnText}>Admin console</Text>
             </Pressable>
           )}
-          <Pressable style={styles.ghostBtn} onPress={doLogout}>
-            <Text style={styles.ghostBtnText}>Log out</Text>
+          <Pressable style={styles.heroBtn} onPress={doLogout}>
+            <Ionicons name="log-out-outline" size={15} color="#fff" />
+            <Text style={styles.heroBtnText}>Log out</Text>
           </Pressable>
         </View>
       </View>
 
+      {/* Academic standing */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Academic standing</Text>
-        <Text style={styles.cardSub}>From the GPA Converter.</Text>
+        <CardHeader icon="school-outline" title="Academic standing" sub="From the GPA Converter." />
         {profile.gpaProfile ? (
           <>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 }}>
+            <View style={styles.gpaRow}>
               <Text style={styles.bigGpa}>{profile.gpaProfile.gpa.toFixed(2)}</Text>
               <Text style={styles.gpaMeta}>
                 Unified GPA · {profile.gpaProfile.percent.toFixed(0)}% US-equivalent · ECTS {profile.gpaProfile.ects}
@@ -131,9 +149,9 @@ export default function ProfileScreen() {
         )}
       </View>
 
+      {/* Details */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Your details</Text>
-        <Text style={styles.cardSub}>Used to score how well each scholarship fits you.</Text>
+        <CardHeader icon="create-outline" title="Your details" sub="Used to score how well each scholarship fits you." />
 
         <Text style={styles.label}>Degree level seeking</Text>
         <View style={styles.pickerWrap}>
@@ -143,15 +161,15 @@ export default function ProfileScreen() {
         </View>
 
         <Text style={styles.label}>Field of study</Text>
-        <TextInput style={styles.input} value={field} onChangeText={setField} placeholder="e.g. Public health" />
+        <TextInput style={styles.input} value={field} onChangeText={setField} placeholder="e.g. Public health" placeholderTextColor={colors.inkFaint} />
 
         <Text style={styles.label}>Nationality</Text>
-        <TextInput style={styles.input} value={nationality} onChangeText={setNationality} placeholder="e.g. Kenya" />
+        <TextInput style={styles.input} value={nationality} onChangeText={setNationality} placeholder="e.g. Kenya" placeholderTextColor={colors.inkFaint} />
 
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>IELTS score</Text>
-            <TextInput style={styles.input} value={ielts} onChangeText={setIelts} keyboardType="decimal-pad" placeholder="e.g. 7.0" />
+            <TextInput style={styles.input} value={ielts} onChangeText={setIelts} keyboardType="decimal-pad" placeholder="e.g. 7.0" placeholderTextColor={colors.inkFaint} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>Work years</Text>
@@ -182,26 +200,26 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.switchRow}>
-          <Switch value={hasCv} onValueChange={setHasCv} />
+          <Switch value={hasCv} onValueChange={setHasCv} {...switchProps} />
           <Text style={styles.switchLabel}>I have a CV/resume ready</Text>
         </View>
         <View style={styles.switchRow}>
-          <Switch value={hasSop} onValueChange={setHasSop} />
+          <Switch value={hasSop} onValueChange={setHasSop} {...switchProps} />
           <Text style={styles.switchLabel}>I have a Statement of Purpose ready</Text>
         </View>
         <View style={styles.switchRow}>
-          <Switch value={hasRecs} onValueChange={setHasRecs} />
+          <Switch value={hasRecs} onValueChange={setHasRecs} {...switchProps} />
           <Text style={styles.switchLabel}>I have reference/recommendation letters ready</Text>
         </View>
 
-        <Pressable style={[styles.primaryBtn, { marginTop: 12 }]} onPress={saveProfile} disabled={saving}>
+        <Pressable style={[styles.primaryBtn, { marginTop: 18 }]} onPress={saveProfile} disabled={saving}>
           <Text style={styles.primaryBtnText}>{saving ? 'Saving…' : 'Save profile'}</Text>
         </Pressable>
       </View>
 
+      {/* Readiness */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Scholarship Readiness Score</Text>
-        <Text style={styles.cardSub}>Like a credit score for your scholarship applications.</Text>
+        <CardHeader icon="speedometer-outline" title="Scholarship Readiness Score" sub="Like a credit score for your scholarship applications." />
         {!profile.readiness ? (
           <View style={styles.emptyBox}><Text style={styles.emptyText}>Save your GPA and details above to see your readiness score.</Text></View>
         ) : (
@@ -209,6 +227,9 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
               <Text style={styles.readinessOverall}>{profile.readiness.overall}</Text>
               <Text style={styles.readinessOutOf}>/ 100</Text>
+            </View>
+            <View style={styles.barTrack}>
+              <View style={[styles.barFill, { width: `${Math.max(0, Math.min(100, Number(profile.readiness.overall)))}%` }]} />
             </View>
             {profile.readiness.categories.map((c) => (
               <View key={c.label} style={styles.readinessRow}>
@@ -220,21 +241,27 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>OpportunityGenie Premium</Text>
-        <Text style={styles.cardSub}>Get scholarships matched to you, statement of purpose review and motivation letter feedback.</Text>
-        <Pressable style={styles.primaryBtn} onPress={() => navigation.navigate('Upgrade')}>
-          <Text style={styles.primaryBtnText}>Upgrade to Premium</Text>
+      {/* Premium */}
+      <View style={styles.premium}>
+        <View style={styles.premiumIcon}>
+          <Ionicons name="diamond-outline" size={20} color="#fff" />
+        </View>
+        <Text style={styles.premiumTitle}>OpportunityGenie Premium</Text>
+        <Text style={styles.premiumSub}>Get scholarships matched to you, statement of purpose review and motivation letter feedback.</Text>
+        <Pressable style={({ pressed }) => [styles.premiumBtn, pressed && { opacity: 0.9 }]} onPress={() => navigation.navigate('Upgrade')}>
+          <Text style={styles.premiumBtnText}>Upgrade to Premium</Text>
         </Pressable>
       </View>
 
+      {/* Legal */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Legal</Text>
+        <CardHeader icon="document-text-outline" title="Legal" />
         <Pressable
           style={styles.linkRow}
           onPress={() => Linking.openURL('https://opportunitygenie.org/static/privacy-policy.html')}
         >
           <Text style={styles.linkRowText}>Privacy Policy</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.blue} />
         </Pressable>
       </View>
     </ScrollView>
@@ -242,36 +269,78 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  eyebrow: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSoft },
-  heading: { fontFamily: fonts.extraBold, fontSize: 27, color: colors.ink, marginBottom: 18 },
-  card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.line, padding: 20, marginBottom: 14 },
-  profileHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  bigAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.blue, alignItems: 'center', justifyContent: 'center' },
-  bigAvatarText: { fontFamily: fonts.extraBold, fontSize: 19, color: '#fff' },
-  userName: { fontFamily: fonts.extraBold, fontSize: 16, color: colors.ink },
-  userEmail: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.inkSoft },
-  outlineBtn: { borderWidth: 1, borderColor: colors.line, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 14 },
-  outlineBtnText: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink },
-  ghostBtn: { backgroundColor: colors.grayTint, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 14 },
-  ghostBtnText: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink },
-  cardTitle: { fontFamily: fonts.extraBold, fontSize: 15.5, color: colors.ink, marginBottom: 3 },
-  cardSub: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.inkSoft, marginBottom: 12 },
-  bigGpa: { fontFamily: fonts.extraBold, fontSize: 28, color: colors.blue },
+  hero: {
+    backgroundColor: colors.blue, borderRadius: radius.xl, padding: 22, marginBottom: 16,
+    alignItems: 'center', ...shadow.card,
+  },
+  bigAvatar: {
+    width: 72, height: 72, borderRadius: 36, backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+  },
+  bigAvatarText: { fontFamily: fonts.extraBold, fontSize: 28, color: colors.blue },
+  userName: { fontFamily: fonts.extraBold, fontSize: 19, color: '#fff' },
+  userEmail: { fontFamily: fonts.regular, fontSize: 13, color: 'rgba(255,255,255,0.82)', marginTop: 2 },
+  heroBtns: { flexDirection: 'row', gap: 10, marginTop: 16, flexWrap: 'wrap', justifyContent: 'center' },
+  heroBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: radius.pill,
+    paddingVertical: 9, paddingHorizontal: 16,
+  },
+  heroBtnText: { fontFamily: fonts.bold, fontSize: 13, color: '#fff' },
+
+  card: {
+    backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line,
+    padding: 20, marginBottom: 16, ...shadow.card,
+  },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  cardIcon: {
+    width: 38, height: 38, borderRadius: 12, backgroundColor: colors.blueTint,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cardTitle: { fontFamily: fonts.extraBold, fontSize: 15.5, color: colors.ink },
+  cardSub: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.inkSoft, marginTop: 1 },
+
+  gpaRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
+  bigGpa: { fontFamily: fonts.extraBold, fontSize: 30, color: colors.blue },
   gpaMeta: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.inkSoft, flex: 1 },
-  emptyBox: { borderWidth: 1, borderColor: colors.line, borderRadius: 10, padding: 14 },
+
+  emptyBox: { backgroundColor: colors.bg, borderRadius: radius.md, padding: 14 },
   emptyText: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSoft },
-  primaryBtn: { backgroundColor: colors.blue, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
+
+  primaryBtn: { backgroundColor: colors.blue, borderRadius: radius.md, paddingVertical: 14, alignItems: 'center' },
   primaryBtnText: { fontFamily: fonts.bold, fontSize: 14, color: '#fff' },
-  label: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.inkSoft, marginBottom: 6, marginTop: 10 },
-  input: { backgroundColor: colors.grayTint, borderRadius: 10, paddingHorizontal: 13, paddingVertical: 12, fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
-  pickerWrap: { backgroundColor: colors.grayTint, borderRadius: 10, overflow: 'hidden' },
+  outlineBtn: { borderWidth: 1.5, borderColor: colors.blue, borderRadius: radius.md, paddingVertical: 9, paddingHorizontal: 16 },
+  outlineBtnText: { fontFamily: fonts.bold, fontSize: 13, color: colors.blue },
+
+  label: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.inkSoft, marginBottom: 6, marginTop: 12 },
+  input: {
+    backgroundColor: colors.bg, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line,
+    paddingHorizontal: 14, paddingVertical: 12, fontFamily: fonts.regular, fontSize: 14, color: colors.ink,
+  },
+  pickerWrap: { backgroundColor: colors.bg, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
-  switchLabel: { fontFamily: fonts.regular, fontSize: 13.5, color: colors.ink, flex: 1 },
-  readinessOverall: { fontFamily: fonts.extraBold, fontSize: 34, color: colors.blue },
-  readinessOutOf: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.inkSoft },
-  readinessRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7 },
-  readinessLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.ink },
-  readinessStars: { color: colors.blue, letterSpacing: 1 },
-  linkRow: { paddingVertical: 10 },
+  switchLabel: { fontFamily: fonts.medium, fontSize: 13.5, color: colors.ink, flex: 1 },
+
+  readinessOverall: { fontFamily: fonts.extraBold, fontSize: 36, color: colors.blue },
+  readinessOutOf: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSoft },
+  barTrack: { height: 8, borderRadius: 4, backgroundColor: colors.pill, overflow: 'hidden', marginBottom: 8 },
+  barFill: { height: 8, borderRadius: 4, backgroundColor: colors.teal },
+  readinessRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
+  readinessLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+  readinessStars: { color: colors.amber, letterSpacing: 1 },
+
+  premium: {
+    backgroundColor: colors.navy, borderRadius: radius.lg, padding: 22, marginBottom: 16, ...shadow.card,
+  },
+  premiumIcon: {
+    width: 42, height: 42, borderRadius: 14, backgroundColor: colors.teal,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+  },
+  premiumTitle: { fontFamily: fonts.extraBold, fontSize: 17, color: '#fff', marginBottom: 4 },
+  premiumSub: { fontFamily: fonts.regular, fontSize: 13, color: 'rgba(255,255,255,0.78)', lineHeight: 19, marginBottom: 16 },
+  premiumBtn: { backgroundColor: '#fff', borderRadius: radius.md, paddingVertical: 13, alignItems: 'center' },
+  premiumBtnText: { fontFamily: fonts.bold, fontSize: 14, color: colors.navy },
+
+  linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 },
   linkRowText: { fontFamily: fonts.bold, fontSize: 14, color: colors.blue },
 });
