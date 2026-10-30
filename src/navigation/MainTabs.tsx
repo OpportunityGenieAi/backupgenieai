@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { colors, fonts } from '../theme/colors';
 import HomeScreen from '../screens/home/HomeScreen';
 import MatchScreen from '../screens/match/MatchScreen';
 import TrackerScreen from '../screens/tracker/TrackerScreen';
@@ -16,6 +16,7 @@ const Tab = createBottomTabNavigator();
  * Android 15+ (target SDK 35/36) draws apps edge to edge, so the status bar sits on top of the
  * screen content. These tab screens have no header, so we leave room for the status bar here,
  * once, instead of in every screen.
+ * HomeScreen is the exception: its blue header extends under the status bar and adds the inset itself.
  */
 function withTopInset(Screen: React.ComponentType<any>) {
   function WithTopInset(props: any) {
@@ -30,7 +31,7 @@ function withTopInset(Screen: React.ComponentType<any>) {
   return WithTopInset;
 }
 
-const HomeTabScreen = withTopInset(HomeScreen);
+const HomeTabScreen = HomeScreen;
 const MatchTabScreen = withTopInset(MatchScreen);
 const TrackerTabScreen = withTopInset(TrackerScreen);
 const AdvisorTabScreen = withTopInset(AdvisorHub);
@@ -58,10 +59,32 @@ export function MainTabs() {
         headerShown: false,
         tabBarActiveTintColor: colors.blue,
         tabBarInactiveTintColor: colors.inkFaint,
-        tabBarStyle: { backgroundColor: '#fff', borderTopColor: colors.line },
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: {
+          backgroundColor: '#fff',
+          borderTopWidth: 0,
+          paddingTop: 6,
+          elevation: 12,
+          shadowColor: colors.navy,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+        },
+        tabBarLabelStyle: { fontFamily: fonts.semiBold, fontSize: 11.5 },
         tabBarIcon: ({ focused, color, size }) => {
           const name = focused ? ICONS[route.name] : ICONS_OUTLINE[route.name];
-          return <Ionicons name={name} size={size} color={color} />;
+          return (
+            <View
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 3,
+                borderRadius: 999,
+                backgroundColor: focused ? colors.blueTint : 'transparent',
+              }}
+            >
+              <Ionicons name={name} size={size} color={color} />
+            </View>
+          );
         },
       })}
     >
