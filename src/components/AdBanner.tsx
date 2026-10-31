@@ -1,49 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { usePublicSettings } from '../context/PublicSettingsContext';
 
-// Every banner asks for a fresh ad this often.
-const REFRESH_MS = 5 * 60 * 1000;
-// If an ad fails to load, try again after this long (the banner takes no space meanwhile).
-const RETRY_MS = 60 * 1000;
+// Standard 320x50 banner: a fixed height, so the layout never jumps when an ad arrives or refreshes.
+const BANNER_HEIGHT = 50;
 
 /**
- * offsetMs staggers the reload so several banners on one screen do not all refresh at the same instant.
+ * The ad refreshes in place (the rate is set in AdMob, see below). There are no timers and no remounting,
+ * so nothing on screen moves. The offsetMs prop is kept so existing screens still compile, but it is unused.
  */
-export function AdBanner({ offsetMs = 0 }: { offsetMs?: number }) {
-  const { adsEnabled, bannerUnitId } = usePublicSettings();
-  const [reloadKey, setReloadKey] = useState(0);
+export function AdBanner(_props: { offsetMs?: number }) {
+  const { adsEnabled, sdkReady, bannerUnitId } = usePublicSettings();
   const [failed, setFailed] = useState(false);
 
-  // Fresh ad on a timer.
-  useEffect(() => {
-    if (!adsEnabled) return;
-    const id = setInterval(() => {
-      setFailed(false);
-      setReloadKey((k) => k + 1);
-    }, REFRESH_MS + offsetMs);
-    return () => clearInterval(id);
-  }, [adsEnabled, offsetMs]);
-
-  // After a failed load, collapse and retry later.
-  useEffect(() => {
-    if (!failed) return;
-    const id = setTimeout(() => {
-      setFailed(false);
-      setReloadKey((k) => k + 1);
-    }, RETRY_MS);
-    return () => clearTimeout(id);
-  }, [failed]);
-
-  if (!adsEnabled || failed) return null;
+  if (!adsEnabled || !sdkReady || failed) return null;
 
   return (
-    <View style={{ alignItems: 'center', marginVertical: 10 }}>
+    <View style={{ alignItems: 'center', justifyContent: 'center', height: BANNER_HEIGHT, marginVertical: 10 }}>
       <BannerAd
-        key={reloadKey}
         unitId={bannerUnitId}
-        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+        size={BannerAdSize.BANNER}
         requestOptions={{ requestNonPersonalizedAdsOnly: false }}
         onAdFailedToLoad={() => setFailed(true)}
       />
