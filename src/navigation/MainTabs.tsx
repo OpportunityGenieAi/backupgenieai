@@ -76,20 +76,9 @@ export function MainTabs() {
           shadowRadius: 12,
         },
         tabBarLabelStyle: { fontFamily: fonts.bold, fontSize: 12, marginTop: 2 },
-        tabBarIcon: ({ focused, color }) => {
+        tabBarIcon: ({ focused, color, size }) => {
           const name = focused ? ICONS[route.name] : ICONS_OUTLINE[route.name];
-          return (
-            <View
-              style={{
-                paddingHorizontal: 18,
-                paddingVertical: 4,
-                borderRadius: 999,
-                backgroundColor: focused ? colors.blueTint : 'transparent',
-              }}
-            >
-              <Ionicons name={name} size={23} color={color} />
-            </View>
-          );
+          return <Ionicons name={name} size={size} color={color} />;
         },
       })}
     >
