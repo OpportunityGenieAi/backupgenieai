@@ -4,29 +4,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { Scholarship } from '../api/scholarships';
 
-// Public page for a scholarship. It shows a summary and an "Open in the app" / "Get it on Google Play"
-// button, but never the official application link: applying happens only inside the app.
+// Public page for a shared scholarship. It shows NO scholarship details, only an "install the app to
+// view it" message, so the content can be seen and applied for only inside the app.
 const SHARE_BASE_URL = 'https://opportunitygenie.org/s';
 
 export function shareUrl(s: Scholarship): string {
   return `${SHARE_BASE_URL}/${s.id}`;
 }
 
+// The shared text deliberately leaves out the scholarship's name and details.
 export function buildShareMessage(s: Scholarship): string {
-  const lines = [
-    `🎓 ${s.name}`,
-    s.provider ? `By ${s.provider}` : '',
-    s.country ? `📍 ${s.country}` : '',
-    s.funding ? `💰 ${s.funding}` : '',
-    s.deadline_window ? `⏰ Deadline: ${s.deadline_window}` : '',
+  return [
+    '🎓 A scholarship was shared with you on OpportunityGenie AI.',
     '',
-    'See the details and apply in the OpportunityGenie AI app:',
+    'Install the app to view the details and apply:',
     shareUrl(s),
-  ];
-  return lines
-    .filter((line, i, arr) => !(line === '' && (i === 0 || arr[i - 1] === '' || i === arr.length - 1)))
-    .join('\n')
-    .trim();
+  ].join('\n');
 }
 
 /**
@@ -37,7 +30,7 @@ export default function ShareButton({ scholarship }: { scholarship: Scholarship 
   const onShare = async () => {
     try {
       await Share.share({
-        title: scholarship.name,
+        title: 'OpportunityGenie AI',
         message: buildShareMessage(scholarship),
       });
     } catch {
