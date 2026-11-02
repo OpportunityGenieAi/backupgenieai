@@ -46,68 +46,65 @@ export default function HomeScreen() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       {focused && <StatusBar style="light" />}
 
-      {/* Sticky header: stays in place while only the scholarship cards scroll */}
-      <View>
-        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-          <View style={styles.headerRow}>
-            <View style={{ flex: 1, marginRight: 12 }}>
-              <Text style={styles.eyebrow}>{user ? `Hi, ${firstName} 👋` : 'Welcome 👋'}</Text>
-              <Text style={styles.heading} numberOfLines={1} adjustsFontSizeToFit>Find Your Scholarship</Text>
-            </View>
-            {user ? (
-              <Pressable style={styles.avatar} onPress={() => navigation.navigate('ProfileTab')}>
-                <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
-              </Pressable>
-            ) : (
-              <Pressable style={styles.loginBtn} onPress={() => navigation.navigate('Login')}>
-                <Ionicons name="log-in-outline" size={21} color={colors.blue} />
-              </Pressable>
-            )}
-          </View>
-
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color={colors.blue} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search scholarships, countries…"
-              placeholderTextColor={colors.inkSoft}
-              value={scholarships.query}
-              onChangeText={onSearch}
-            />
-          </View>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          style={{ flexGrow: 0 }}
-          contentContainerStyle={styles.chipRow}
-        >
-          {REGIONS.map((r) => {
-            const active = scholarships.region === r;
-            return (
-              <Pressable
-                key={r}
-                style={[styles.chip, active && styles.chipActive]}
-                onPress={() => scholarships.setRegion(r)}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{r}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* Only this list scrolls */}
+      {/* The whole page scrolls: header, search, chips, then the scholarships */}
       <FlatList
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 6, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         keyboardShouldPersistTaps="handled"
         data={scholarships.items}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <View>
+              <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+                <View style={styles.headerRow}>
+                  <View style={{ flex: 1, marginRight: 12 }}>
+                    <Text style={styles.eyebrow}>{user ? `Hi, ${firstName} 👋` : 'Welcome 👋'}</Text>
+                    <Text style={styles.heading} numberOfLines={1} adjustsFontSizeToFit>Find Your Scholarship</Text>
+                  </View>
+                  {user ? (
+                    <Pressable style={styles.avatar} onPress={() => navigation.navigate('ProfileTab')}>
+                      <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable style={styles.loginBtn} onPress={() => navigation.navigate('Login')}>
+                      <Ionicons name="log-in-outline" size={21} color={colors.blue} />
+                    </Pressable>
+                  )}
+                </View>
+
+                <View style={styles.searchBar}>
+                  <Ionicons name="search" size={18} color={colors.blue} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search scholarships, countries…"
+                    placeholderTextColor={colors.inkSoft}
+                    value={scholarships.query}
+                    onChangeText={onSearch}
+                  />
+                </View>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                style={{ flexGrow: 0 }}
+                contentContainerStyle={styles.chipRow}
+              >
+                {REGIONS.map((r) => {
+                  const active = scholarships.region === r;
+                  return (
+                    <Pressable
+                      key={r}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => scholarships.setRegion(r)}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{r}</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            <View style={styles.pad}>
             {!user && (
               <Pressable style={styles.ctaBanner} onPress={() => navigation.navigate('Signup')}>
                 <View style={styles.ctaIcon}><Ionicons name="lock-open-outline" size={19} color="#fff" /></View>
@@ -128,10 +125,11 @@ export default function HomeScreen() {
 
             {scholarships.loading && <ActivityIndicator style={{ marginVertical: 20 }} color={colors.blue} />}
             <AdBanner />
+            </View>
           </View>
         }
         renderItem={({ item, index }) => (
-          <View>
+          <View style={styles.pad}>
             <ScholarshipCard
               scholarship={item}
               showMatch={!!user}
@@ -145,15 +143,16 @@ export default function HomeScreen() {
           </View>
         )}
         ListEmptyComponent={!scholarships.loading ? (
-          <Text style={styles.empty}>No scholarships match those filters yet.</Text>
+          <Text style={[styles.empty, styles.pad]}>No scholarships match those filters yet.</Text>
         ) : null}
-        ListFooterComponent={scholarships.items.length > 0 ? <AdBanner offsetMs={60000} /> : null}
+        ListFooterComponent={scholarships.items.length > 0 ? <View style={styles.pad}><AdBanner offsetMs={60000} /></View> : null}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  pad: { paddingHorizontal: 22 },
   header: {
     backgroundColor: colors.blue,
     paddingHorizontal: 26,
@@ -179,7 +178,7 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   searchInput: { flex: 1, fontFamily: fonts.regular, fontSize: 14.5, color: colors.ink, padding: 0 },
-  chipRow: { paddingHorizontal: 26, paddingTop: 18, paddingBottom: 10 },
+  chipRow: { paddingHorizontal: 26, paddingTop: 18, paddingBottom: 14 },
   chip: {
     paddingHorizontal: 18, paddingVertical: 9, borderRadius: radius.pill,
     backgroundColor: colors.pill, marginRight: 8,
