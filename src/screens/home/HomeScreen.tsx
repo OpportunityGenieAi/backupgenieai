@@ -44,7 +44,7 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {focused && <StatusBar style="light" />}
+      {focused && <StatusBar style="dark" />}
 
       {/* The whole page scrolls: header, search, chips, then the scholarships */}
       <FlatList
@@ -55,7 +55,7 @@ export default function HomeScreen() {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <View>
-              <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+              <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
                 <View style={styles.headerRow}>
                   <View style={{ flex: 1, marginRight: 12 }}>
                     <Text style={styles.eyebrow}>{user ? `Hi, ${firstName} 👋` : 'Welcome 👋'}</Text>
@@ -154,31 +154,29 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   pad: { paddingHorizontal: 22 },
   header: {
-    backgroundColor: colors.blue,
+    backgroundColor: colors.bg,
     paddingHorizontal: 26,
-    paddingBottom: 26,
-    borderBottomLeftRadius: radius.xl,
-    borderBottomRightRadius: radius.xl,
+    paddingBottom: 4,
   },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
-  eyebrow: { fontFamily: fonts.medium, fontSize: 13.5, color: 'rgba(255,255,255,0.8)', marginBottom: 2 },
-  heading: { fontFamily: fonts.extraBold, fontSize: 23, color: '#fff' },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  eyebrow: { fontFamily: fonts.medium, fontSize: 12.5, color: colors.inkSoft, marginBottom: 0 },
+  heading: { fontFamily: fonts.extraBold, fontSize: 20, color: colors.ink },
   avatar: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff',
+    width: 38, height: 38, borderRadius: 19, backgroundColor: colors.blue,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarText: { fontFamily: fonts.extraBold, fontSize: 16, color: colors.blue },
+  avatarText: { fontFamily: fonts.extraBold, fontSize: 16, color: '#fff' },
   loginBtn: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff',
+    width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line,
     alignItems: 'center', justifyContent: 'center',
   },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff',
-    borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 13,
+    borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: colors.line,
     ...shadow.card,
   },
   searchInput: { flex: 1, fontFamily: fonts.regular, fontSize: 14.5, color: colors.ink, padding: 0 },
-  chipRow: { paddingHorizontal: 26, paddingTop: 18, paddingBottom: 14 },
+  chipRow: { paddingHorizontal: 26, paddingTop: 12, paddingBottom: 10 },
   chip: {
     paddingHorizontal: 18, paddingVertical: 9, borderRadius: radius.pill,
     backgroundColor: colors.pill, marginRight: 8,
