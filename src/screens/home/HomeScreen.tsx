@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, FlatList, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
@@ -15,6 +15,9 @@ const REGIONS = ['All', 'UK', 'USA', 'Europe', 'Africa', 'Asia', 'Other'];
 
 // Banner after these list positions (0-based: 4 = after the 5th scholarship). Value = reload stagger in ms.
 const MID_ADS: Record<number, number> = { 4: 20000, 9: 40000 };
+
+// How far (in pixels) the list must move in one direction before the header hides or comes back.
+const SCROLL_THRESHOLD = 6;
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -42,68 +45,46 @@ export default function HomeScreen() {
 
   const firstName = user?.name ? user.name.split(' ')[0] : '';
 
+  // Quick-return header: it slides away when you scroll down the list and comes straight back
+  // with one small scroll up, from anywhere in the list.
+  const [headerH, setHeaderH] = useState(insets.top + 150);
+  const translateY = useRef(new Animated.Value(0)).current;
+  const lastY = useRef(0);
+  const headerShown = useRef(true);
+
+  const setHeaderShown = useCallback((show: boolean) => {
+    if (headerShown.current === show) return;
+    headerShown.current = show;
+    Animated.timing(translateY, {
+      toValue: show ? 0 : -headerH,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [headerH, translateY]);
+
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = Math.max(e.nativeEvent.contentOffset.y, 0);
+    const dy = y - lastY.current;
+    lastY.current = y;
+    if (y <= 0) { setHeaderShown(true); return; }
+    if (dy > SCROLL_THRESHOLD && y > headerH) setHeaderShown(false);
+    else if (dy < -SCROLL_THRESHOLD) setHeaderShown(true);
+  }, [headerH, setHeaderShown]);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       {focused && <StatusBar style="dark" />}
 
-      {/* The whole page scrolls: header, search, chips, then the scholarships */}
       <FlatList
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingTop: headerH + 6, paddingBottom: 100 }}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
         data={scholarships.items}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <View>
-              <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-                <View style={styles.headerRow}>
-                  <View style={{ flex: 1, marginRight: 12 }}>
-                    <Text style={styles.eyebrow}>{user ? `Hi, ${firstName} 👋` : 'Welcome 👋'}</Text>
-                    <Text style={styles.heading} numberOfLines={1} adjustsFontSizeToFit>Find Your Scholarship</Text>
-                  </View>
-                  {user ? (
-                    <Pressable style={styles.avatar} onPress={() => navigation.navigate('ProfileTab')}>
-                      <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
-                    </Pressable>
-                  ) : (
-                    <Pressable style={styles.loginBtn} onPress={() => navigation.navigate('Login')}>
-                      <Ionicons name="log-in-outline" size={21} color={colors.blue} />
-                    </Pressable>
-                  )}
-                </View>
-
-                <View style={styles.searchBar}>
-                  <Ionicons name="search" size={18} color={colors.blue} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search scholarships, countries…"
-                    placeholderTextColor={colors.inkSoft}
-                    value={scholarships.query}
-                    onChangeText={onSearch}
-                  />
-                </View>
-              </View>
-
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                style={{ flexGrow: 0 }}
-                contentContainerStyle={styles.chipRow}
-              >
-                {REGIONS.map((r) => {
-                  const active = scholarships.region === r;
-                  return (
-                    <Pressable
-                      key={r}
-                      style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => scholarships.setRegion(r)}
-                    >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{r}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
             <View style={styles.pad}>
             {!user && (
               <Pressable style={styles.ctaBanner} onPress={() => navigation.navigate('Signup')}>
@@ -147,12 +128,73 @@ export default function HomeScreen() {
         ) : null}
         ListFooterComponent={scholarships.items.length > 0 ? <View style={styles.pad}><AdBanner offsetMs={60000} /></View> : null}
       />
+
+      {/* Header sits on top of the list and slides in and out. It looks the same as before. */}
+      <Animated.View
+        onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}
+        style={[styles.headerOverlay, { transform: [{ translateY }] }]}
+      >
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={styles.eyebrow}>{user ? `Hi, ${firstName} 👋` : 'Welcome 👋'}</Text>
+            <Text style={styles.heading} numberOfLines={1} adjustsFontSizeToFit>Find Your Scholarship</Text>
+          </View>
+          {user ? (
+            <Pressable style={styles.avatar} onPress={() => navigation.navigate('ProfileTab')}>
+              <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
+            </Pressable>
+          ) : (
+            <Pressable style={styles.loginBtn} onPress={() => navigation.navigate('Login')}>
+              <Ionicons name="log-in-outline" size={21} color={colors.blue} />
+            </Pressable>
+          )}
+        </View>
+
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color={colors.blue} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search scholarships, countries…"
+            placeholderTextColor={colors.inkSoft}
+            value={scholarships.query}
+            onChangeText={onSearch}
+          />
+        </View>
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        style={{ flexGrow: 0 }}
+        contentContainerStyle={styles.chipRow}
+      >
+        {REGIONS.map((r) => {
+          const active = scholarships.region === r;
+          return (
+            <Pressable
+              key={r}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => scholarships.setRegion(r)}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{r}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+      </Animated.View>
+
+      {/* Keeps the clock and battery area solid while the header is hidden */}
+      <View pointerEvents="none" style={[styles.statusCover, { height: insets.top }]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   pad: { paddingHorizontal: 22 },
+  headerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, backgroundColor: colors.bg },
+  statusCover: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, backgroundColor: colors.bg },
   header: {
     backgroundColor: colors.bg,
     paddingHorizontal: 26,
@@ -179,10 +221,10 @@ const styles = StyleSheet.create({
   chipRow: { paddingHorizontal: 26, paddingTop: 12, paddingBottom: 10 },
   chip: {
     paddingHorizontal: 18, paddingVertical: 9, borderRadius: radius.pill,
-    backgroundColor: colors.pill, marginRight: 8,
+    backgroundColor: colors.blueTint, marginRight: 8,
   },
-  chipActive: { backgroundColor: colors.blue, ...shadow.card },
-  chipText: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.inkSoft },
+  chipActive: { backgroundColor: colors.accent, ...shadow.card },
+  chipText: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.blue },
   chipTextActive: { color: '#fff' },
   ctaBanner: {
     backgroundColor: colors.navy, borderRadius: radius.lg, padding: 16,
