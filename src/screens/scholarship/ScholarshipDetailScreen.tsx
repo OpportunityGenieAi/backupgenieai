@@ -6,6 +6,7 @@ import { colors, fonts, radius, shadow } from '../../theme/colors';
 import { Scholarship, ScholarshipsApi } from '../../api/scholarships';
 import { useInterstitialAd } from '../../hooks/useInterstitialAd';
 import ShareButton from '../../components/ShareButton';
+import ScholarshipFacts from '../../components/ScholarshipFacts';
 
 /**
  * Opens when someone taps a shared link (https://opportunitygenie.org/s/<id>).
@@ -81,20 +82,7 @@ export default function ScholarshipDetailScreen() {
         <Text style={styles.sectionLabel}>About this scholarship</Text>
         <Text style={styles.blurb}>{scholarship.blurb}</Text>
 
-        <View style={styles.metaPanel}>
-          <View style={styles.metaItem}>
-            <Ionicons name="location-outline" size={15} color={colors.blue} />
-            <Text style={styles.metaText}>{scholarship.country}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="cash-outline" size={15} color={colors.teal} />
-            <Text style={styles.metaText}>{scholarship.funding}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={15} color={colors.amber} />
-            <Text style={styles.metaText}>{scholarship.deadline_window}</Text>
-          </View>
-        </View>
+        <ScholarshipFacts scholarship={scholarship} />
 
         {scholarship.tags && scholarship.tags.length > 0 && (
           <View style={styles.tagRow}>

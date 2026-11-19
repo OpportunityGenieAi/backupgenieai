@@ -5,6 +5,7 @@ import { colors, fonts, radius, shadow } from '../theme/colors';
 import { Scholarship } from '../api/scholarships';
 import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import ShareButton from './ShareButton';
+import ScholarshipFacts from './ScholarshipFacts';
 
 function matchColor(tier?: string | null): string {
   if (tier === 'green') return colors.green;
@@ -65,20 +66,7 @@ export function ScholarshipCard({
 
       <Text style={styles.blurb}>{scholarship.blurb}</Text>
 
-      <View style={styles.metaPanel}>
-        <View style={styles.metaItem}>
-          <Ionicons name="location-outline" size={14} color={colors.blue} />
-          <Text style={styles.metaText}>{scholarship.country}</Text>
-        </View>
-        <View style={styles.metaItem}>
-          <Ionicons name="cash-outline" size={14} color={colors.teal} />
-          <Text style={styles.metaText}>{scholarship.funding}</Text>
-        </View>
-        <View style={styles.metaItem}>
-          <Ionicons name="time-outline" size={14} color={colors.amber} />
-          <Text style={styles.metaText}>{scholarship.deadline_window}</Text>
-        </View>
-      </View>
+      <ScholarshipFacts scholarship={scholarship} />
 
       {scholarship.tags?.length > 0 && (
         <View style={styles.tagRow}>
