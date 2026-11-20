@@ -10,6 +10,7 @@ export interface Scholarship {
   level: string;
   field: string;
   funding: string;
+  funding_amount?: string | null;   // e.g. "€1,300/month"
   deadline_window: string;
   official_link: string;
   tags: string[];

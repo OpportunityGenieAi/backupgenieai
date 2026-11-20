@@ -5,9 +5,11 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts } from '../../theme/colors';
 import { Scholarship, ScholarshipsApi } from '../../api/scholarships';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function AdminScreen() {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<Scholarship[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,7 +34,7 @@ export function AdminScreen() {
   };
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: 60 }}>
       <Pressable style={styles.backRow} onPress={() => navigation.goBack()}>
         <Ionicons name="chevron-back" size={16} color={colors.inkSoft} />
         <Text style={styles.backText}>Back</Text>
@@ -51,7 +53,7 @@ export function AdminScreen() {
         <View key={s.id} style={styles.row}>
           <View style={{ flex: 1 }}>
             <Text style={styles.rowTitle}>{s.name}</Text>
-            <Text style={styles.rowSub}>{s.country} · {s.level} · {s.funding}</Text>
+            <Text style={styles.rowSub}>{s.country} · {s.level} · {s.funding}{s.funding_amount ? ` · ${s.funding_amount}` : ''}</Text>
           </View>
           <Pressable onPress={() => navigation.navigate('ScholarshipForm', { scholarship: s })} style={styles.iconBtn}>
             <Ionicons name="create-outline" size={19} color={colors.ink} />
@@ -69,17 +71,31 @@ export function AdminScreen() {
   );
 }
 
+const LEVEL_OPTIONS = [
+  'Undergraduate',
+  "Master's",
+  "Master's / PhD",
+  'PhD',
+  'PhD / Postdoc',
+  'Postdoc',
+  "Undergraduate / Master's",
+  "Undergraduate / Master's / PhD",
+  'Various levels',
+];
+
 export function ScholarshipFormScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const existing: Scholarship | undefined = route.params?.scholarship;
+  const insets = useSafeAreaInsets();
 
   const [name, setName] = useState(existing?.name || '');
   const [provider, setProvider] = useState(existing?.provider || '');
   const [country, setCountry] = useState(existing?.country || '');
-  const [level, setLevel] = useState(existing?.level || '');
+  const [level, setLevel] = useState(existing?.level || "Master's");
   const [field, setField] = useState(existing?.field || 'All fields');
   const [funding, setFunding] = useState(existing?.funding || 'Fully-funded');
+  const [amount, setAmount] = useState(existing?.funding_amount || '');
   const [deadline, setDeadline] = useState(existing?.deadline_window || '');
   const [link, setLink] = useState(existing?.official_link || '');
   const [tags, setTags] = useState((existing?.tags || []).join(', '));
@@ -94,7 +110,7 @@ export function ScholarshipFormScreen() {
     setSaving(true);
     const payload = {
       name: name.trim(), provider: provider.trim(), country: country.trim(), level: level.trim(),
-      field: field.trim() || 'All fields', funding, deadline_window: deadline.trim(), official_link: link.trim(),
+      field: field.trim() || 'All fields', funding, funding_amount: amount.trim() || null, deadline_window: deadline.trim(), official_link: link.trim(),
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean), blurb: blurb.trim(),
     };
     try {
@@ -108,7 +124,7 @@ export function ScholarshipFormScreen() {
   };
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: 60 }}>
       <Pressable style={styles.backRow} onPress={() => navigation.goBack()}>
         <Ionicons name="chevron-back" size={16} color={colors.inkSoft} />
         <Text style={styles.backText}>Back</Text>
@@ -122,7 +138,13 @@ export function ScholarshipFormScreen() {
       <Text style={styles.label}>Country / region</Text>
       <TextInput style={styles.input} value={country} onChangeText={setCountry} />
       <Text style={styles.label}>Degree level</Text>
-      <TextInput style={styles.input} value={level} onChangeText={setLevel} />
+      <View style={styles.pickerWrap}>
+        <Picker selectedValue={level} onValueChange={(v) => setLevel(v as string)}>
+          {(LEVEL_OPTIONS.includes(level) ? LEVEL_OPTIONS : [level, ...LEVEL_OPTIONS]).map((l) => (
+            <Picker.Item key={l} label={l} value={l} />
+          ))}
+        </Picker>
+      </View>
       <Text style={styles.label}>Field of study</Text>
       <TextInput style={styles.input} value={field} onChangeText={setField} />
       <Text style={styles.label}>Funding type</Text>
@@ -131,6 +153,14 @@ export function ScholarshipFormScreen() {
           {['Fully-funded', 'Partial', 'Partial grant'].map((f) => <Picker.Item key={f} label={f} value={f} />)}
         </Picker>
       </View>
+      <Text style={styles.label}>Funding amount (optional)</Text>
+      <TextInput
+        style={styles.input}
+        value={amount}
+        onChangeText={setAmount}
+        placeholder="e.g. €1,300/month or $25,000/year"
+        placeholderTextColor={colors.inkFaint}
+      />
       <Text style={styles.label}>Deadline window</Text>
       <TextInput style={styles.input} value={deadline} onChangeText={setDeadline} />
       <Text style={styles.label}>Official application link</Text>
@@ -165,6 +195,6 @@ const styles = StyleSheet.create({
   iconBtn: { padding: 6 },
   footnote: { fontFamily: fonts.regular, fontSize: 11.5, color: colors.inkFaint, marginTop: 10 },
   label: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.inkSoft, marginBottom: 6, marginTop: 12 },
-  input: { backgroundColor: colors.grayTint, borderRadius: 10, paddingHorizontal: 13, paddingVertical: 12, fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
-  pickerWrap: { backgroundColor: colors.grayTint, borderRadius: 10, overflow: 'hidden' },
+  input: { backgroundColor: colors.grayTint, borderRadius: 10, paddingHorizontal: 13, paddingVertical: 12, fontFamily: fonts.regular, fontSize: 14, color: colors.ink, borderWidth: 1, borderColor: colors.line },
+  pickerWrap: { backgroundColor: colors.grayTint, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
 });
