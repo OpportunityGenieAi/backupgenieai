@@ -30,8 +30,10 @@ export default function PremiumGateBridge() {
   useEffect(
     () =>
       PremiumGate.subscribe(() => {
-        const name = focusedRouteName(navigation.getState?.());
-        if (/home/i.test(name)) return; // never interrupt the home page
+        const nav: any = navigation;
+        const state = nav.getRootState ? nav.getRootState() : nav.getState?.();
+        const name = focusedRouteName(state);
+        if (!/match|tracker|advisor/i.test(name)) return; // only on Match, Tracker, Advisor
         setVisible(true);
       }),
     [navigation]
