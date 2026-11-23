@@ -4,6 +4,18 @@ import { useNavigation } from '@react-navigation/native';
 import { PremiumGate } from '../api/premiumGate';
 import { colors, fonts } from '../theme/colors';
 
+// Name of the screen the user is looking at right now, even inside nested tabs.
+function focusedRouteName(state: any): string {
+  let name = '';
+  let cur = state;
+  while (cur && cur.routes) {
+    const r = cur.routes[cur.index ?? 0];
+    name = r?.name ?? name;
+    cur = r?.state;
+  }
+  return name;
+}
+
 const TRIAL_DAYS = 3;
 const PERKS = [
   'Scholarships matched to your profile',
@@ -15,7 +27,15 @@ export default function PremiumGateBridge() {
   const navigation = useNavigation<any>();
   const [visible, setVisible] = useState(false);
 
-  useEffect(() => PremiumGate.subscribe(() => setVisible(true)), []);
+  useEffect(
+    () =>
+      PremiumGate.subscribe(() => {
+        const name = focusedRouteName(navigation.getState?.());
+        if (/home/i.test(name)) return; // never interrupt the home page
+        setVisible(true);
+      }),
+    [navigation]
+  );
 
   const close = () => setVisible(false);
   const go = () => {
