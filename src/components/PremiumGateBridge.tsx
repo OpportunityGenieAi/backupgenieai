@@ -1,62 +1,79 @@
-import { useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { PremiumGate } from '../api/premiumGate';
+import { colors, fonts } from '../theme/colors';
 
-// Only these areas of the app should ever ask the user to pay.
-const GATED = /match|tracker|advisor/i;
-
-/** Names of every screen currently open, from the outer navigator down to the focused tab, e.g. "Main/Tabs/Match". */
-function openScreens(state: any): string {
-  const names: string[] = [];
-  let s = state;
-  while (s && s.routes) {
-    const r = s.routes[s.index ?? 0];
-    if (r?.name) names.push(String(r.name));
-    s = r?.state;
-  }
-  return names.join('/');
-}
+const TRIAL_DAYS = 3;
+const PERKS = [
+  'Scholarships matched to your profile',
+  'Tracker to keep every application on course',
+  'AI Advisor for your statement of purpose and motivation letters',
+];
 
 export default function PremiumGateBridge() {
   const navigation = useNavigation<any>();
-  const pending = useRef(false); // a Premium-only request failed while the user was somewhere else (e.g. Home)
-  const open = useRef(false);
+  const [visible, setVisible] = useState(false);
 
-  useEffect(() => {
-    const onGatedScreen = (state?: any) => GATED.test(openScreens(state ?? navigation.getState?.()));
+  useEffect(() => PremiumGate.subscribe(() => setVisible(true)), []);
 
-    const show = () => {
-      if (open.current) return;
-      open.current = true;
-      pending.current = false;
-      Alert.alert(
-        'Premium feature',
-        'Match, Tracker and the AI Advisor are part of OpportunityGenie Premium. Upgrade to unlock personalized AI guidance and tools.',
-        [
-          { text: 'Not now', style: 'cancel', onPress: () => { open.current = false; } },
-          { text: 'Upgrade', onPress: () => { open.current = false; navigation.navigate('Upgrade'); } },
-        ],
-        { cancelable: true, onDismiss: () => { open.current = false; } },
-      );
-    };
+  const close = () => setVisible(false);
+  const go = () => {
+    setVisible(false);
+    navigation.navigate('Upgrade');
+  };
 
-    // A Premium-only request failed: ask now only if the user is on Match, Tracker or Advisor.
-    const unsubGate = PremiumGate.subscribe(() => {
-      if (onGatedScreen()) show();
-      else pending.current = true; // remember it, and ask later if they open one of those tabs
-    });
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
+      <View style={styles.backdrop}>
+        <View style={styles.sheet}>
+          <Text style={styles.eyebrow}>OpportunityGenie Premium</Text>
+          <Text style={styles.title}>Try Premium free for {TRIAL_DAYS} days</Text>
+          <Text style={styles.sub}>
+            Your scholarship journey, with everything unlocked. Take your time and see how it feels.
+          </Text>
 
-    // The user moved to another screen.
-    const unsubNav = navigation.addListener?.('state', (e: any) => {
-      if (pending.current && onGatedScreen(e?.data?.state)) show();
-    });
+          <View style={styles.perks}>
+            {PERKS.map((p) => (
+              <View key={p} style={styles.perkRow}>
+                <Text style={styles.tick}>✓</Text>
+                <Text style={styles.perkText}>{p}</Text>
+              </View>
+            ))}
+          </View>
 
-    return () => {
-      unsubGate?.();
-      unsubNav?.();
-    };
-  }, [navigation]);
+          <Text style={styles.fine}>
+            To begin, add your Google Play payment method. You pay nothing during the {TRIAL_DAYS}-day trial. After
+            that, your subscription renews automatically at the price shown on the next screen. Cancel any time before
+            the trial ends in Google Play, under Payments and subscriptions, and you won't be charged. Free trial is
+            for first-time subscribers.
+          </Text>
 
-  return null;
+          <Pressable style={styles.primary} onPress={go}>
+            <Text style={styles.primaryText}>Start my {TRIAL_DAYS}-day free trial</Text>
+          </Pressable>
+          <Pressable style={styles.secondary} onPress={close}>
+            <Text style={styles.secondaryText}>Maybe later</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
 }
+
+const styles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  sheet: { backgroundColor: colors.card, borderRadius: 20, padding: 22 },
+  eyebrow: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.blue, marginBottom: 6 },
+  title: { fontFamily: fonts.extraBold, fontSize: 23, color: colors.ink, marginBottom: 8 },
+  sub: { fontFamily: fonts.regular, fontSize: 14.5, color: colors.inkSoft, lineHeight: 21, marginBottom: 14 },
+  perks: { marginBottom: 12 },
+  perkRow: { flexDirection: 'row', gap: 10, paddingVertical: 5 },
+  tick: { fontFamily: fonts.extraBold, fontSize: 15, color: colors.blue },
+  perkText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink, flex: 1, lineHeight: 20 },
+  fine: { fontFamily: fonts.regular, fontSize: 11.5, color: colors.inkSoft, lineHeight: 16.5, marginBottom: 14 },
+  primary: { backgroundColor: colors.blue, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  primaryText: { fontFamily: fonts.bold, fontSize: 15, color: '#fff' },
+  secondary: { paddingVertical: 12, alignItems: 'center' },
+  secondaryText: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.inkSoft },
+});
