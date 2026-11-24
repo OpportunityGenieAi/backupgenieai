@@ -3,6 +3,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { InterstitialAd, AdEventType } from 'react-native-google-mobile-ads';
 import { usePublicSettings } from '../context/PublicSettingsContext';
 
+// Interstitial ads are switched off. Set this to true to turn them back on.
+const ENABLED = false;
+
 // At most one full-screen ad this often, across the whole app. Change this number to show them more or less often.
 const MIN_GAP_MS = 4 * 60 * 1000;
 // Wait this long before asking for another ad after one fails to load.
@@ -44,7 +47,7 @@ export function useInterstitialAd() {
   const [, force] = useState(0);
 
   useEffect(() => {
-    if (!adsEnabled || !sdkReady) return;
+    if (!ENABLED || !adsEnabled || !sdkReady) return;
     ensureAd(interstitialUnitId);
     const l = () => force((n) => n + 1);
     listeners.add(l);
@@ -53,7 +56,7 @@ export function useInterstitialAd() {
 
   /** Shows the shared ad if one is ready and the cooldown has passed. */
   const tryShow = useCallback((minGapMs: number = MIN_GAP_MS) => {
-    if (!adsEnabled || !ad || !loaded) return false;
+    if (!ENABLED || !adsEnabled || !ad || !loaded) return false;
     if (Date.now() - lastShownAt < minGapMs) return false;
     lastShownAt = Date.now();
     loaded = false;

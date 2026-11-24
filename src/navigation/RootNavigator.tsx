@@ -7,6 +7,8 @@ import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
 import GpaConverterScreen from '../screens/profile/GpaConverterScreen';
 import UpgradeScreen from '../screens/profile/UpgradeScreen';
+import ConsultationScreen from '../screens/consult/ConsultationScreen';
+import ConsultationFormScreen from '../screens/consult/ConsultationFormScreen';
 import PremiumGateBridge from '../components/PremiumGateBridge';
 import ScholarshipDetailScreen from '../screens/scholarship/ScholarshipDetailScreen';
 import AdvisorChatScreen from '../screens/advisor/AdvisorChatScreen';
@@ -50,6 +52,8 @@ export function RootNavigator() {
       />
       <Stack.Screen name="GpaConverter" component={GpaConverterScreen} />
       <Stack.Screen name="Upgrade" component={UpgradeScreen} options={{ headerShown: true, title: "Premium" }} />
+      <Stack.Screen name="Consultation" component={ConsultationScreen} options={{ headerShown: true, title: 'Book a consultation' }} />
+      <Stack.Screen name="ConsultationForm" component={ConsultationFormScreen} options={{ headerShown: true, title: 'Your details', gestureEnabled: false }} />
       <Stack.Screen name="Admin" component={AdminScreen} />
       <Stack.Screen name="AppSettings" component={AppSettingsScreen} />
       <Stack.Screen name="ScholarshipForm" component={ScholarshipFormScreen} />

@@ -3,6 +3,9 @@ import { AppState } from 'react-native';
 import { AppOpenAd, AdEventType } from 'react-native-google-mobile-ads';
 import { usePublicSettings } from '../context/PublicSettingsContext';
 
+// App Open ads are switched off. Set this to true to turn them back on.
+const ENABLED = false;
+
 const MAX_AGE_MS = 4 * 60 * 60 * 1000; // App Open ads expire after 4 hours
 const MIN_GAP_MS = 5 * 60 * 1000;      // never more often than this
 const RETRY_MS = 60 * 1000;
@@ -12,7 +15,7 @@ export default function AppOpenManager() {
   const { adsEnabled, sdkReady, appOpenUnitId } = usePublicSettings();
 
   useEffect(() => {
-    if (!adsEnabled || !sdkReady) return;
+    if (!ENABLED || !adsEnabled || !sdkReady) return;
 
     let ad: AppOpenAd | null = null;
     let loaded = false;

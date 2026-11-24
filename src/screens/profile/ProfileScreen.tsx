@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useTracker } from '../../context/TrackerContext';
 import { FeatureGate } from '../../components/FeatureGate';
+import ConsultationCard from '../../components/ConsultationCard';
 
 const LEVELS = ['Undergraduate', "Master's", 'PhD', 'Postdoc'];
 const LEADERSHIP = ['None', 'Some', 'Extensive'];
@@ -123,6 +124,9 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </View>
+
+      {/* Book a consultation */}
+      <ConsultationCard />
 
       {/* Academic standing */}
       <View style={styles.card}>

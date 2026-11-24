@@ -10,11 +10,15 @@ import { useScholarships } from '../../context/ScholarshipContext';
 import { useTracker } from '../../context/TrackerContext';
 import { ScholarshipCard } from '../../components/ScholarshipCard';
 import { AdBanner } from '../../components/AdBanner';
+import { NativeAdCard } from '../../components/NativeAdCard';
 
 const REGIONS = ['All', 'UK', 'USA', 'Europe', 'Africa', 'Asia', 'Other'];
 
-// Banner after these list positions (0-based: 4 = after the 5th scholarship). Value = reload stagger in ms.
-const MID_ADS: Record<number, number> = { 4: 20000, 9: 40000 };
+// Banner after these list positions (0-based: 5 = after the 6th scholarship). Value = reload stagger in ms.
+const MID_ADS: Record<number, number> = { 5: 20000, 19: 40000 };
+
+// A native ad (it looks like a card) after the 2nd scholarship, then after every 7th one: 2nd, 9th, 16th ...
+const NATIVE_EVERY = 7;
 
 // How far (in pixels) the list must move in one direction before the header hides or comes back.
 const SCROLL_THRESHOLD = 6;
@@ -77,7 +81,7 @@ export default function HomeScreen() {
 
       <FlatList
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: headerH + 6, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingTop: headerH + 6, paddingBottom: 40 }}
         onScroll={onScroll}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
@@ -105,7 +109,6 @@ export default function HomeScreen() {
             </View>
 
             {scholarships.loading && <ActivityIndicator style={{ marginVertical: 20 }} color={colors.blue} />}
-            <AdBanner />
             </View>
           </View>
         }
@@ -121,6 +124,7 @@ export default function HomeScreen() {
               }}
             />
             {MID_ADS[index] !== undefined ? <AdBanner offsetMs={MID_ADS[index]} /> : null}
+            {index % NATIVE_EVERY === 1 ? <NativeAdCard /> : null}
           </View>
         )}
         ListEmptyComponent={!scholarships.loading ? (
@@ -128,6 +132,11 @@ export default function HomeScreen() {
         ) : null}
         ListFooterComponent={scholarships.items.length > 0 ? <View style={styles.pad}><AdBanner offsetMs={60000} /></View> : null}
       />
+
+      {/* Always-visible banner at the bottom of the screen, just above the tab bar. Takes no space until an ad loads. */}
+      <View style={styles.stickyAd}>
+        <AdBanner sticky />
+      </View>
 
       {/* Header sits on top of the list and slides in and out. It looks the same as before. */}
       <Animated.View
@@ -193,6 +202,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   pad: { paddingHorizontal: 22 },
+  stickyAd: { backgroundColor: colors.bg },
   headerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, backgroundColor: colors.bg },
   statusCover: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, backgroundColor: colors.bg },
   header: {

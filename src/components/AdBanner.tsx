@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { usePublicSettings } from '../context/PublicSettingsContext';
 
-// Standard 320x50 banner: a fixed height, so the layout never jumps when an ad arrives or refreshes.
+// In-feed banners are a standard 320x50: a fixed height, so the list never jumps when an ad arrives.
 const BANNER_HEIGHT = 50;
-// If AdMob has no ad to give right now (common for new ad units), ask again after this long.
-const RETRY_MS = 60 * 1000;
+// If AdMob has no ad to give right now, ask again after this long (and again whenever the app comes back to the front).
+const RETRY_MS = 15 * 1000;
 
 /**
- * The ad refreshes in place (the rate is set in AdMob). A failed load is retried after a minute,
- * so one "no ad available" answer does not hide the banner for the rest of the session.
- * The offsetMs prop is kept so existing screens still compile, but it is unused.
+ * sticky = the banner pinned to the bottom of the home screen: full width, always on screen.
+ * A failed load is retried every few seconds, so one "no ad available" answer never hides the banner for long.
+ * It takes no space at all until an ad has loaded. The offsetMs prop is kept so existing screens still compile.
  */
-export function AdBanner(_props: { offsetMs?: number }) {
+export function AdBanner({ sticky = false }: { offsetMs?: number; sticky?: boolean }) {
   const { adsEnabled, sdkReady, bannerUnitId } = usePublicSettings();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -27,7 +27,32 @@ export function AdBanner(_props: { offsetMs?: number }) {
     return () => clearTimeout(id);
   }, [failed]);
 
+  // Coming back to the app is a fresh chance for an ad.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') {
+        setFailed(false);
+        setAttempt((n) => n + 1);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   if (!adsEnabled || !sdkReady || failed) return null;
+
+  if (sticky) {
+    return (
+      <View style={{ width: '100%', alignItems: 'center' }}>
+        <BannerAd
+          key={attempt}
+          unitId={bannerUnitId}
+          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+          requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+          onAdFailedToLoad={() => setFailed(true)}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center', height: BANNER_HEIGHT, marginVertical: 10 }}>
