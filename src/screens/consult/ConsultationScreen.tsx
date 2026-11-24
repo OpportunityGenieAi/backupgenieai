@@ -47,11 +47,11 @@ export default function ConsultationScreen() {
         err = purchaseErrorListener((e: any) => {
           setBusy(false);
           if (/cancel/i.test(`${e?.code ?? ''} ${e?.message ?? ''}`)) return;
-          Alert.alert('Payment not completed', String(e?.message ?? 'Please try again.'));
+          Alert.alert('Not available yet', /query product/i.test(String(e?.message)) ? 'Consultations are being activated on Google Play. Please try again in a little while.' : String(e?.message ?? 'Please try again.'));
         });
         const result: any[] = ((await fetchProducts({ skus: SKUS as string[], type: 'in-app' })) as any) ?? [];
         const map: Record<string, string> = {};
-        result.forEach((p) => { if (p?.id ?? p?.productId) map[p.id ?? p.productId] = p.displayPrice; });
+        result.forEach((p) => { if (p?.id ?? p?.productId) if (p.displayPrice) map[p.id ?? p.productId] = p.displayPrice; });
         if (alive) setPrices(map);
       } catch { /* the buttons still show the standard prices */ }
       if (alive) setReady(true);
@@ -68,7 +68,7 @@ export default function ConsultationScreen() {
       await requestPurchase({ type: 'in-app', request: { google: { skus: [selected] } } } as any);
     } catch (e: any) {
       setBusy(false);
-      if (!/cancel/i.test(String(e?.message ?? ''))) Alert.alert('Payment not started', String(e?.message ?? 'Please try again.'));
+      if (!/cancel/i.test(String(e?.message ?? ''))) Alert.alert('Not available yet', /query product/i.test(String(e?.message)) ? 'Consultations are being activated on Google Play. Please try again in a little while.' : String(e?.message ?? 'Please try again.'));
     }
   };
 
