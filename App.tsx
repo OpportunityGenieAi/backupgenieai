@@ -12,7 +12,7 @@ import {
 } from '@expo-google-fonts/inter';
 
 import { colors, fonts } from './src/theme/colors';
-import { AnimatedSplashScreen } from './src/components/AnimatedSplashScreen';
+import LaunchScreen from './src/components/LaunchScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { PublicSettingsProvider } from './src/context/PublicSettingsContext';
 import { ProfileProvider } from './src/context/ProfileContext';
@@ -41,7 +41,7 @@ function SessionGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (loading) {
-    return <View style={styles.splash} />;
+    return <LaunchScreen />;
   }
   return <>{children}</>;
 }
@@ -51,13 +51,14 @@ export default function App() {
     Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold,
   });
   const [introFinished, setIntroFinished] = useState(false);
+  useEffect(() => {
+    // keep the launch screen up for at least 1.8s so it never just flashes
+    const t = setTimeout(() => setIntroFinished(true), 1800);
+    return () => clearTimeout(t);
+  }, []);
 
   if (!fontsLoaded) {
-    return (
-      <View style={styles.splash}>
-        <ActivityIndicator color={colors.blue} />
-      </View>
-    );
+    return <LaunchScreen />;
   }
 
   return (
@@ -73,7 +74,11 @@ export default function App() {
                   <RootNavigator />
                 </NavigationContainer>
               </SessionGate>
-              {!introFinished && <AnimatedSplashScreen onFinish={() => setIntroFinished(true)} />}
+              {!introFinished && (
+                <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]}>
+                  <LaunchScreen />
+                </View>
+              )}
             </TrackerProvider>
           </ScholarshipProvider>
         </ProfileProvider>
