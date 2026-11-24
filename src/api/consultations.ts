@@ -2,8 +2,8 @@ import { api } from './client';
 import { API_BASE_URL } from '../config/env';
 
 export const CONSULT_PRODUCTS = {
-  consult_30min: { minutes: 30, fallbackPrice: '$8.00', label: '30 minutes' },
-  consult_60min: { minutes: 60, fallbackPrice: '$15.00', label: '1 hour' },
+  consult_30min_v2: { minutes: 30, fallbackPrice: '$8.00', label: '30 minutes' },
+  consult_60min_v2: { minutes: 60, fallbackPrice: '$15.00', label: '1 hour' },
 } as const;
 export type ConsultSku = keyof typeof CONSULT_PRODUCTS;
 

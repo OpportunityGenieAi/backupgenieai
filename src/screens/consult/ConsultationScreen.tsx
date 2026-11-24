@@ -20,7 +20,7 @@ const STEPS = [
 
 export default function ConsultationScreen() {
   const navigation = useNavigation<any>();
-  const [selected, setSelected] = useState<ConsultSku>('consult_60min');
+  const [selected, setSelected] = useState<ConsultSku>('consult_60min_v2');
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
