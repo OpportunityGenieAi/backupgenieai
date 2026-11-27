@@ -50,22 +50,32 @@ export function bestOffer(product: any): any | null {
   return trialOffer(product) ?? offers.find((o) => phasesOf(o).length <= 1) ?? offers[0] ?? null;
 }
 
-let cache: { at: number; value: boolean } | null = null;
+export interface TrialDetails { days: number; price: string; period: string }
+let cache: { at: number; value: TrialDetails | null } | null = null;
 
 /** Quick check used by the pop-up. Never throws, never waits longer than ~2.5 s. */
-export async function trialAvailable(): Promise<boolean> {
+export async function trialDetails(): Promise<TrialDetails | null> {
   if (cache && Date.now() - cache.at < 10 * 60 * 1000) return cache.value;
-  const work = (async () => {
+  const work = (async (): Promise<TrialDetails | null> => {
     await initConnection();
-    const res: any[] = ((await fetchProducts({ skus: ['premium_monthly', 'premium_annual'], type: 'subs' })) as any) ?? [];
-    return res.some((p) => !!trialOffer(p));
+    const res: any[] = ((await fetchProducts({ skus: ['premium_annual', 'premium_monthly'], type: 'subs' })) as any) ?? [];
+    const idOf = (p: any) => p?.id ?? p?.productId ?? p?.sku;
+    const annual = res.find((p) => idOf(p) === 'premium_annual' && trialOffer(p));
+    const monthly = res.find((p) => idOf(p) === 'premium_monthly' && trialOffer(p));
+    const pick = annual ?? monthly;
+    if (!pick) return null;
+    return {
+      days: trialDays(pick) ?? 3,
+      price: String(pick.displayPrice ?? (annual ? '$19.00' : '$2.00')),
+      period: annual ? 'year' : 'month',
+    };
   })();
-  const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2500));
+  const timeout = new Promise<TrialDetails | null>((resolve) => setTimeout(() => resolve(null), 2500));
   try {
     const value = await Promise.race([work, timeout]);
     cache = { at: Date.now(), value };
     return value;
   } catch {
-    return false;
+    return null;
   }
 }
