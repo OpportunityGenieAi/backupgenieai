@@ -10,6 +10,7 @@ import UpgradeScreen from '../screens/profile/UpgradeScreen';
 import ConsultationScreen from '../screens/consult/ConsultationScreen';
 import ConsultationFormScreen from '../screens/consult/ConsultationFormScreen';
 import PremiumGateBridge from '../components/PremiumGateBridge';
+import AnalyticsBridge from '../analytics/AnalyticsBridge';
 import ScholarshipDetailScreen from '../screens/scholarship/ScholarshipDetailScreen';
 import AdvisorChatScreen from '../screens/advisor/AdvisorChatScreen';
 import { AdminScreen, ScholarshipFormScreen } from '../screens/admin/AdminScreen';
@@ -24,6 +25,7 @@ export function RootNavigator() {
     <>
     <NotificationBridge />
     <PremiumGateBridge />
+    <AnalyticsBridge />
     <Stack.Navigator id={undefined} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen
