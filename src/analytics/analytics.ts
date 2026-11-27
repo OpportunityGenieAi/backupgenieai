@@ -5,8 +5,8 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-const MEASUREMENT_ID = 'G-AB12CD34EF';
-const API_SECRET = 'G-GLRQF0BDP9';
+const MEASUREMENT_ID = 'G-GLRQF0BDP9';
+const API_SECRET = '6_45uJwARuiIZtwULEUZww';
 
 const CID_KEY = 'og_ga_client_id';
 const SESSION_GAP_MS = 30 * 60 * 1000;
