@@ -12,6 +12,7 @@ import {
 } from 'expo-iap';
 import { SubscriptionApi } from '../../api/subscription';
 import { colors, fonts, radius, shadow } from '../../theme/colors';
+import { bestOffer, offerTokenOf, trialDays } from '../../api/trialInfo';
 
 const MONTHLY_ID = 'premium_monthly';
 const ANNUAL_ID = 'premium_annual';
@@ -117,8 +118,7 @@ export default function UpgradeScreen() {
   const subscribe = async () => {
     const plan = PLANS[selected];
     const product = products[plan.id];
-    const offers = product?.subscriptionOffers ?? [];
-    const offerToken = offers[0]?.offerTokenAndroid ?? offers[0]?.offerToken;
+    const offerToken = offerTokenOf(bestOffer(product));
     if (!offerToken) {
       Alert.alert('Not available', 'This plan is not available right now. Please try again later.');
       return;
@@ -166,6 +166,9 @@ export default function UpgradeScreen() {
   if (loading) return <ActivityIndicator style={{ marginTop: 40 }} color={colors.blue} />;
 
   const available = (Object.keys(PLANS) as PlanKey[]).filter((k) => products[PLANS[k].id]);
+  const selProduct = products[PLANS[selected].id];
+  const selTrial = trialDays(selProduct);
+  const selPrice = `${selProduct?.displayPrice ?? PLANS[selected].fallbackPrice} / ${PLANS[selected].per}`;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
@@ -222,6 +225,12 @@ export default function UpgradeScreen() {
                   </View>
                 )}
               </View>
+              {trialDays(product) ? (
+                <View style={styles.trialPill}>
+                  <Ionicons name="gift-outline" size={13} color={colors.teal} />
+                  <Text style={styles.trialPillText}>{trialDays(product)}-day free trial</Text>
+                </View>
+              ) : null}
               <Text style={styles.planBlurb}>{plan.blurb}</Text>
             </Pressable>
           );
@@ -232,8 +241,13 @@ export default function UpgradeScreen() {
         <>
           <Text style={styles.cta}>Start your Premium journey today!</Text>
           <Pressable style={({ pressed }) => [styles.subscribeBtn, (pressed || busy) && { opacity: 0.85 }]} onPress={subscribe} disabled={busy}>
-            {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.subscribeText}>Subscribe</Text>}
+            {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.subscribeText}>{selTrial ? `Start ${selTrial}-day free trial` : 'Subscribe'}</Text>}
           </Pressable>
+          {selTrial ? (
+            <Text style={styles.trialNote}>
+              Try everything free for {selTrial} days. You'll add a payment method in Google Play, and your first payment of {selPrice} is only taken after the trial ends. Cancel anytime before then and you won't be charged.
+            </Text>
+          ) : null}
         </>
       )}
 
@@ -241,7 +255,7 @@ export default function UpgradeScreen() {
         <Text style={styles.restoreText}>Restore purchase</Text>
       </Pressable>
       <Text style={styles.legal}>
-        Payment is charged to your Google Play account. Subscriptions renew automatically until you cancel them in Google Play, at least 24 hours before the renewal date.
+        Payment is charged to your Google Play account. Subscriptions renew automatically until you cancel them in Google Play, at least 24 hours before the renewal date. If your plan includes a free trial, the first payment is taken when the trial ends.
       </Text>
     </ScrollView>
   );
@@ -292,5 +306,8 @@ const styles = StyleSheet.create({
   subscribeText: { fontFamily: fonts.bold, fontSize: 16, color: '#fff' },
   restoreBtn: { alignItems: 'center', paddingVertical: 14, marginTop: 6 },
   restoreText: { fontFamily: fonts.bold, fontSize: 14, color: colors.blue },
+  trialPill: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: '#E3F5F2', borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: 10, marginTop: 10 },
+  trialPillText: { fontFamily: fonts.bold, fontSize: 11.5, color: colors.teal },
+  trialNote: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.inkSoft, textAlign: 'center', lineHeight: 18, marginTop: 10, marginBottom: 4 },
   legal: { fontFamily: fonts.regular, fontSize: 11.5, color: colors.inkFaint, textAlign: 'center', lineHeight: 17 },
 });
